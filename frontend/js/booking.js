@@ -454,36 +454,167 @@ function startQrTimer() {
 }
 
 // =========================================================
-// CHECKOUT & CONFIRMATION HANDLER
+// CHECKOUT & PAYMENT GATEWAY CONTROLLER
 // =========================================================
-async function submitBookingCheckout() {
-  const btn = document.getElementById('payNowBtn');
+function submitBookingCheckout() {
+  const firstName = document.getElementById('paxFirstName')?.value.trim();
+  const lastName = document.getElementById('paxLastName')?.value.trim();
+  const email = document.getElementById('paxEmail')?.value.trim();
+  const phone = document.getElementById('paxPhone')?.value.trim();
+
+  if (!firstName || !lastName || !email || !phone) {
+    showToast('Please fill all mandatory passenger contact details', false);
+    document.getElementById('paxFirstName')?.focus();
+    return;
+  }
+
+  // Validate Card details if Card tab is chosen
+  if (bookingState.paymentMethod === 'card') {
+    const cardInputs = document.querySelectorAll('#tabContentCard input');
+    const cardNum = cardInputs[0]?.value.trim();
+    if (!cardNum || cardNum.length < 12) {
+      showToast('Please enter a valid 16-digit card number', false);
+      cardInputs[0]?.focus();
+      return;
+    }
+  }
+
+  // Open the interactive payment gateway authorization modal
+  openPaymentGatewayModal();
+}
+
+function openPaymentGatewayModal() {
+  const backdrop = document.getElementById('paymentModalBackdrop');
+  const amountEl = document.getElementById('pgModalAmount');
+  const titleEl = document.getElementById('pgModalTitle');
+  const upiSection = document.getElementById('pgModalUpiSection');
+  const cardSection = document.getElementById('pgModalCardSection');
+  const processingState = document.getElementById('pgProcessingState');
+  const actionButtons = document.getElementById('pgActionButtons');
+
+  if (processingState) processingState.style.display = 'none';
+  if (actionButtons) actionButtons.style.display = 'flex';
+
+  const total = (bookingState.finalTotal || 4914).toLocaleString('en-IN');
+  if (amountEl) amountEl.textContent = `₹${total}`;
+
+  if (bookingState.paymentMethod === 'card') {
+    if (titleEl) titleEl.textContent = '3D-Secure Bank Gateway';
+    if (upiSection) upiSection.style.display = 'none';
+    if (cardSection) cardSection.style.display = 'block';
+  } else {
+    if (titleEl) titleEl.textContent = `NPCI UPI · ${bookingState.upiApp}`;
+    if (upiSection) upiSection.style.display = 'block';
+    if (cardSection) cardSection.style.display = 'none';
+    const appDisplay = document.getElementById('pgUpiAppDisplay');
+    const vpaDisplay = document.getElementById('pgUpiVpaDisplay');
+    if (appDisplay) appDisplay.textContent = bookingState.upiApp;
+    if (vpaDisplay) vpaDisplay.textContent = bookingState.upiId || 'user@okhdfcbank';
+  }
+
+  if (backdrop) backdrop.classList.add('open');
+  showToast('Connecting to secure payment switch...', true);
+}
+
+function cancelPaymentAuthorization() {
+  const backdrop = document.getElementById('paymentModalBackdrop');
+  if (backdrop) backdrop.classList.remove('open');
+  authorizePaymentFailure('Transaction cancelled by user in payment gateway dialog');
+}
+
+async function authorizePaymentSuccess() {
+  const processingState = document.getElementById('pgProcessingState');
+  const actionButtons = document.getElementById('pgActionButtons');
+  const processText = document.getElementById('pgProcessText');
+
+  if (actionButtons) actionButtons.style.display = 'none';
+  if (processingState) processingState.style.display = 'block';
+  if (processText) processText.textContent = 'Authenticating PIN with issuing bank...';
+
+  // Step 2 simulated latency
+  setTimeout(() => {
+    if (processText) processText.textContent = 'NPCI Debit Confirmed. Generating DGCA Ticket...';
+  }, 600);
+
+  const payload = buildCheckoutPayload({
+    payment_status: 'COMPLETED',
+    payment_verified: true
+  });
+
+  try {
+    const res = await window.api.checkoutFlight(payload);
+    setTimeout(() => {
+      const backdrop = document.getElementById('paymentModalBackdrop');
+      if (backdrop) backdrop.classList.remove('open');
+
+      if (res && res.status === 'CONFIRMED' && res.seat_allocated) {
+        bookingState.confirmedBooking = res;
+        renderConfirmedTicket(res);
+        showToast(`🎉 Payment Confirmed! Seat ${res.seat_number} allocated.`);
+      } else {
+        renderPaymentFailed(res || { failure_reason: 'Payment status could not be verified by bank switch.' });
+      }
+    }, 1200);
+
+  } catch (err) {
+    console.error('Checkout error:', err);
+    setTimeout(() => {
+      const backdrop = document.getElementById('paymentModalBackdrop');
+      if (backdrop) backdrop.classList.remove('open');
+      renderPaymentFailed({
+        failure_reason: 'Network timeout during bank settlement. Transaction aborted.'
+      });
+    }, 1000);
+  }
+}
+
+async function authorizePaymentFailure(reason) {
+  const processingState = document.getElementById('pgProcessingState');
+  const actionButtons = document.getElementById('pgActionButtons');
+  const processText = document.getElementById('pgProcessText');
+
+  if (actionButtons) actionButtons.style.display = 'none';
+  if (processingState) processingState.style.display = 'block';
+  if (processText) processText.textContent = 'Simulating payment decline from banking network...';
+
+  const failReason = reason || 'Bank authorization declined (NPCI Error U16: Authentication failed / insufficient funds)';
+
+  const payload = buildCheckoutPayload({
+    payment_status: 'FAILED',
+    payment_verified: false,
+    failure_reason: failReason
+  });
+
+  try {
+    const res = await window.api.checkoutFlight(payload);
+    setTimeout(() => {
+      const backdrop = document.getElementById('paymentModalBackdrop');
+      if (backdrop) backdrop.classList.remove('open');
+      renderPaymentFailed(res);
+    }, 800);
+  } catch (err) {
+    setTimeout(() => {
+      const backdrop = document.getElementById('paymentModalBackdrop');
+      if (backdrop) backdrop.classList.remove('open');
+      renderPaymentFailed({ failure_reason: failReason });
+    }, 800);
+  }
+}
+
+function buildCheckoutPayload(extraFields = {}) {
   const firstName = document.getElementById('paxFirstName')?.value.trim() || 'Rajesh';
   const lastName = document.getElementById('paxLastName')?.value.trim() || 'Sharma';
   const title = document.getElementById('paxTitle')?.value || 'Mr';
   const email = document.getElementById('paxEmail')?.value.trim() || 'rajesh.sharma@example.com';
   const phone = document.getElementById('paxPhone')?.value.trim() || '9876543210';
   const meal = document.getElementById('paxMeal')?.value || 'Indian Vegetarian Thali';
-
   const gstin = document.getElementById('gstNumber')?.value.trim() || null;
   const company = document.getElementById('gstCompanyName')?.value.trim() || null;
-
-  if (!firstName || !lastName || !email || !phone) {
-    showToast('Please fill all mandatory passenger contact details', false);
-    return;
-  }
-
-  // Visual loading feedback
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = `<span>⏳ Verifying UPI Transaction with NPCI...</span>`;
-  }
-  showToast('Initiating UPI Payment Gateway...', true);
 
   const f = bookingState.flight;
   const tb = bookingState.taxBreakdown;
 
-  const payload = {
+  return {
     flight_no: f.flight_no,
     airline: f.airline,
     origin_code: f.origin_code,
@@ -499,45 +630,41 @@ async function submitBookingCheckout() {
     base_price: tb?.base_fare || 4120,
     payment_method: bookingState.paymentMethod,
     upi_vpa: bookingState.paymentMethod === 'upi' ? bookingState.upiId : null,
-    promo_code: bookingState.couponCode || null
+    promo_code: bookingState.couponCode || null,
+    ...extraFields
   };
-
-  try {
-    const res = await window.api.checkoutFlight(payload);
-    bookingState.confirmedBooking = res;
-
-    // Simulate 600ms network settlement confirmation
-    setTimeout(() => {
-      renderConfirmedTicket(res);
-      showToast(`🎉 Payment Successful! PNR: ${res.pnr}`);
-    }, 600);
-
-  } catch (err) {
-    console.error('Checkout error:', err);
-    showToast('Payment processing error. Please retry.', false);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<span>🔒 Pay ₹${(bookingState.finalTotal || 4914).toLocaleString('en-IN')} & Book Flight</span>`;
-    }
-  }
 }
 
 // =========================================================
-// RENDER CONFIRMED E-TICKET & BOARDING PASS
+// RENDER CONFIRMED E-TICKET & ALLOCATED SEATS
 // =========================================================
 function renderConfirmedTicket(data) {
-  // Update Stepper
+  // Update Stepper to Completed
   document.getElementById('step1Indicator')?.classList.add('completed');
   document.getElementById('stepDiv1')?.classList.add('active');
   document.getElementById('step2Indicator')?.classList.add('completed');
   document.getElementById('stepDiv2')?.classList.add('active');
   document.getElementById('step3Indicator')?.classList.add('active');
 
-  // Hide form, show confirmation view
+  // STRICT VIEW TOGGLING: Hide form and failure view, Show ONLY confirmation view
   const formSection = document.getElementById('checkoutFormSection');
+  const failureView = document.getElementById('paymentFailedView');
   const successView = document.getElementById('ticketSuccessView');
+
   if (formSection) formSection.style.display = 'none';
+  if (failureView) failureView.style.display = 'none';
   if (successView) successView.style.display = 'block';
+
+  // Highlight Booked Seat
+  const seatBanner = document.getElementById('confSeatBanner');
+  if (seatBanner) {
+    const isWindow = data.seat_number.endsWith('A') || data.seat_number.endsWith('F');
+    seatBanner.textContent = `Seat ${data.seat_number} (${isWindow ? 'Window' : 'Aisle'} · Forward Cabin)`;
+  }
+
+  // Payment Method
+  const pmEl = document.getElementById('confPaymentMethod');
+  if (pmEl) pmEl.textContent = data.payment_method === 'UPI' ? `UPI (${bookingState.upiApp || 'NPCI'})` : data.payment_method;
 
   // Fill in Ticket details
   document.getElementById('confSentEmail') && (document.getElementById('confSentEmail').textContent = data.email);
@@ -549,7 +676,7 @@ function renderConfirmedTicket(data) {
 
   document.getElementById('confPaxName') && (document.getElementById('confPaxName').textContent = data.passenger_name.toUpperCase());
   document.getElementById('confFlightDetails') && (document.getElementById('confFlightDetails').textContent = `${data.flight_no} (${bookingState.flight?.aircraft || 'A320neo'})`);
-  document.getElementById('confSeatNo') && (document.getElementById('confSeatNo').textContent = data.seat_number);
+  document.getElementById('confSeatNo') && (document.getElementById('confSeatNo').textContent = `${data.seat_number} (${data.seat_number.endsWith('A') || data.seat_number.endsWith('F') ? 'Window' : 'Aisle'})`);
   document.getElementById('confGateTerminal') && (document.getElementById('confGateTerminal').textContent = `Gate ${data.gate} · ${data.terminal}`);
 
   document.getElementById('confOrigin') && (document.getElementById('confOrigin').textContent = `${data.origin_code} (${bookingState.flight?.origin_city || 'Origin'})`);
@@ -574,6 +701,62 @@ function renderConfirmedTicket(data) {
 
   // Scroll to top
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// =========================================================
+// RENDER PAYMENT FAILED VIEW (NO SEATS ALLOCATED)
+// =========================================================
+function renderPaymentFailed(errData) {
+  // Reset Stepper (Payment Step Failed)
+  document.getElementById('step3Indicator')?.classList.remove('active');
+  document.getElementById('stepDiv2')?.classList.remove('active');
+
+  // STRICT VIEW TOGGLING: Hide form, Hide confirmed view, Show Failure view
+  const formSection = document.getElementById('checkoutFormSection');
+  const successView = document.getElementById('ticketSuccessView');
+  const failureView = document.getElementById('paymentFailedView');
+
+  if (formSection) formSection.style.display = 'none';
+  if (successView) successView.style.display = 'none';
+  if (failureView) failureView.style.display = 'block';
+
+  // Fill in failure information
+  const txnIdEl = document.getElementById('failTxnId');
+  const amountEl = document.getElementById('failAmount');
+  const methodEl = document.getElementById('failMethod');
+  const reasonEl = document.getElementById('failReason');
+
+  if (txnIdEl) txnIdEl.textContent = errData.transaction_id || `TXN-FAIL-${Math.floor(100000 + Math.random() * 900000)}`;
+  if (amountEl) amountEl.textContent = `₹${(bookingState.finalTotal || 4914).toLocaleString('en-IN')}`;
+  if (methodEl) methodEl.textContent = bookingState.paymentMethod === 'card' ? 'Credit / Debit Card' : `UPI (${bookingState.upiApp})`;
+  if (reasonEl) reasonEl.textContent = errData.failure_reason || errData.error_message || 'Payment authorization declined by issuing bank (Error: U16)';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast('❌ Payment authorization declined. Seats not allocated.', false);
+}
+
+function retryBookingPayment() {
+  const formSection = document.getElementById('checkoutFormSection');
+  const failureView = document.getElementById('paymentFailedView');
+  const successView = document.getElementById('ticketSuccessView');
+
+  if (failureView) failureView.style.display = 'none';
+  if (successView) successView.style.display = 'none';
+  if (formSection) formSection.style.display = 'grid';
+
+  const payCard = document.getElementById('paymentSectionCard');
+  if (payCard) {
+    payCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  showToast('Ready to retry payment. Enter PIN or authorize on your device.');
+}
+
+function changePaymentMethod() {
+  retryBookingPayment();
+  const tabs = document.querySelector('.payment-tabs-header');
+  if (tabs) {
+    tabs.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 // Download Invoice JSON/Summary
@@ -603,4 +786,13 @@ window.switchPaymentTab = switchPaymentTab;
 window.selectUpiApp = selectUpiApp;
 window.verifyVpa = verifyVpa;
 window.submitBookingCheckout = submitBookingCheckout;
+window.openPaymentGatewayModal = openPaymentGatewayModal;
+window.cancelPaymentAuthorization = cancelPaymentAuthorization;
+window.authorizePaymentSuccess = authorizePaymentSuccess;
+window.authorizePaymentFailure = authorizePaymentFailure;
+window.renderConfirmedTicket = renderConfirmedTicket;
+window.renderPaymentFailed = renderPaymentFailed;
+window.retryBookingPayment = retryBookingPayment;
+window.changePaymentMethod = changePaymentMethod;
 window.downloadInvoiceSummary = downloadInvoiceSummary;
+

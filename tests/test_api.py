@@ -280,7 +280,27 @@ def test_full_api_suite():
     assert supa_data["project_id"] == "thtwkhhccxmkkgwtoleb"
     print(f"[PASS] Supabase Cloud Database Status: PASS (URL: {supa_data['project_url']}, Project: {supa_data['project_id']}, Status: {supa_data['message']})")
 
-    print("\nALL 25 TEST SUITES PASSED SUCCESSFULLY!")
+    # 26. Test Payment Failure Validation (Seats NOT allocated without completed payment)
+    fail_res = client.post("/api/v1/google-flights/checkout", json={
+        "flight_no": "6E-205",
+        "airline": "IndiGo",
+        "origin_code": "HYD",
+        "destination_code": "DEL",
+        "passenger_name": "Rajesh Sharma",
+        "payment_status": "FAILED",
+        "payment_verified": False,
+        "failure_reason": "NPCI User PIN Timeout"
+    })
+    assert fail_res.status_code == 200
+    fail_data = fail_res.json()
+    assert fail_data["status"] == "FAILED"
+    assert fail_data["seat_allocated"] is False
+    assert fail_data["seat_number"] is None
+    assert fail_data["pnr"] is None
+    assert "error_code" in fail_data
+    print(f"[PASS] Payment Failure Validation: PASS (Status: {fail_data['status']}, Seats Allocated: {fail_data['seat_allocated']}, Error: {fail_data['error_code']})")
+
+    print("\nALL 26 TEST SUITES PASSED SUCCESSFULLY!")
 
 if __name__ == "__main__":
     test_full_api_suite()

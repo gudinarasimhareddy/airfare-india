@@ -901,3 +901,204 @@
   font-size: 12px;
   color: var(--text-muted);
 }
+
+/* ---------------------------------------------------------
+   Payment Modal Dialog (NPCI / 3D-Secure Gateway)
+   --------------------------------------------------------- */
+.payment-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(8, 14, 28, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-medium);
+}
+
+.payment-modal-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.payment-gateway-modal {
+  background: var(--bg-card);
+  border: 1px solid rgba(14, 165, 233, 0.4);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(14, 165, 233, 0.2);
+  overflow: hidden;
+  transform: scale(0.92);
+  transition: transform var(--transition-medium);
+}
+
+.payment-modal-backdrop.open .payment-gateway-modal {
+  transform: scale(1);
+}
+
+.pg-modal-header {
+  padding: 18px 24px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(99, 102, 241, 0.15));
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pg-modal-body {
+  padding: 24px;
+}
+
+.pg-merchant-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+}
+
+.pg-pin-box {
+  background: rgba(14, 165, 233, 0.05);
+  border: 1px dashed rgba(14, 165, 233, 0.3);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.pg-pin-input {
+  width: 180px;
+  font-size: 24px;
+  letter-spacing: 12px;
+  text-align: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--brand-cyan);
+  border-radius: 8px;
+  color: var(--brand-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  margin: 10px auto;
+  display: block;
+}
+
+/* ---------------------------------------------------------
+   Payment Failed View
+   --------------------------------------------------------- */
+.payment-failed-container {
+  max-width: 780px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease;
+}
+
+.payment-failed-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  border-radius: var(--radius-lg);
+  padding: 36px 28px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(244, 63, 94, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.payment-failed-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #f43f5e, #fb7185, #f43f5e);
+}
+
+.failed-icon-circle {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(244, 63, 94, 0.15);
+  border: 2px solid var(--brand-rose);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  color: var(--brand-rose);
+  margin: 0 auto 20px;
+  animation: pulseFail 2s infinite;
+}
+
+@keyframes pulseFail {
+  0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+  70% { box-shadow: 0 0 0 16px rgba(244, 63, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+}
+
+.failed-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin: 24px 0;
+  text-align: left;
+}
+
+.failed-detail-item {
+  font-size: 12px;
+}
+
+.failed-detail-item label {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 3px;
+  display: block;
+}
+
+.failed-detail-item span {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.failed-no-seat-banner {
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px dashed rgba(244, 63, 94, 0.4);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  color: #fb7185;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* Booked Seat Highlight Banner */
+.confirmed-seat-banner {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(14, 165, 233, 0.15));
+  border: 1px solid var(--brand-mint);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+

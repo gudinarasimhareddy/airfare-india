@@ -245,6 +245,9 @@ class CheckoutRequest(BaseModel):
     payment_method: Optional[str] = "UPI"
     upi_id: Optional[str] = "traveler@okaxis"
     upi_vpa: Optional[str] = None
+    payment_status: Optional[str] = "COMPLETED"
+    payment_verified: Optional[bool] = True
+    failure_reason: Optional[str] = None
     addons_total: Optional[int] = 0
     insurance_opted: Optional[bool] = False
     digiyatra_opted: Optional[bool] = False
@@ -257,7 +260,7 @@ from backend.supabase_client import save_booking_to_supabase
 async def process_flight_checkout(req: CheckoutRequest):
     """
     Simulates secure payment gateway checkout and issues confirmed DGCA e-ticket & boarding pass
-    with GST tax invoice, automatically mirroring to Supabase cloud database if configured.
+    ONLY IF payment is completed and verified. Otherwise returns payment failure and allocates no seat.
     """
 
     effective_fare = req.total_fare if req.total_fare is not None else (req.base_price if req.base_price is not None else 5400)
@@ -273,6 +276,41 @@ async def process_flight_checkout(req: CheckoutRequest):
         final_amount += taxes["convenience_fee_card"]
 
     flight_num = req.flight_no or "6E-205"
+    orig_code = req.origin_code or req.origin or "HYD"
+    dest_code = req.destination_code or req.destination or "DEL"
+    t_date = req.travel_date or req.depart_date or datetime.now().strftime("%Y-%m-%d")
+    p_name = req.passenger_name or "Rajesh Sharma"
+
+    # STRICT PAYMENT VALIDATION
+    status_str = (req.payment_status or "COMPLETED").upper()
+    is_verified = bool(req.payment_verified) if req.payment_verified is not None else True
+
+    if status_str in ["FAILED", "CANCELLED", "DECLINED", "REJECTED"] or not is_verified:
+        fail_code = "ERR_NPCI_DECLINED" if pay_method == "UPI" else "ERR_GATEWAY_DECLINED"
+        fail_msg = req.failure_reason or (
+            "Payment authorization was declined by issuing bank (NPCI Error U16). No fare has been charged."
+            if pay_method == "UPI"
+            else "Card authorization failed: 3D-Secure authentication not completed or cancelled."
+        )
+        return {
+            "status": "FAILED",
+            "payment_status": "FAILED",
+            "error_code": fail_code,
+            "error_title": "Payment Authorization Failed",
+            "error_message": fail_msg,
+            "failure_reason": fail_msg,
+            "transaction_id": f"TXN-FAIL-{random.randint(10000000, 99999999)}",
+            "payment_method": pay_method,
+            "amount_attempted": final_amount,
+            "flight_no": flight_num,
+            "sector": f"{orig_code} ➔ {dest_code}",
+            "passenger_name": p_name,
+            "seat_allocated": False,
+            "seat_number": None,
+            "pnr": None,
+            "eticket_number": None,
+            "retry_allowed": True
+        }
     pnr_suffix = f"{random.randint(1000, 9999)}"
     airline_code = flight_num.split('-')[0] if '-' in flight_num else (flight_num.split()[0] if ' ' in flight_num else "6E")
     pnr = f"{airline_code}-{pnr_suffix}"
@@ -281,15 +319,9 @@ async def process_flight_checkout(req: CheckoutRequest):
     gate = f"G{random.randint(2, 22)}"
     terminal = f"T{random.choice(['2', '3'])}"
     utr_ref = f"UPI/{random.randint(400000000000, 499999999999)}" if pay_method == "UPI" else f"PGW/{random.randint(10000000, 99999999)}"
-    
-    orig_code = req.origin_code or req.origin or "HYD"
-    dest_code = req.destination_code or req.destination or "DEL"
-    t_date = req.travel_date or req.depart_date or datetime.now().strftime("%Y-%m-%d")
-    p_name = req.passenger_name or "Rajesh Sharma"
-
     confirmation_resp = {
         "status": "CONFIRMED",
-
+        "seat_allocated": True,
         "pnr": pnr,
         "eticket_number": eticket_no,
         "payment_status": "SUCCESSFUL",

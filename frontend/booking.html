@@ -560,16 +560,36 @@
 
     </div>
 
-    <!-- 5. Confirmed E-Ticket & Boarding Pass View (Shown upon successful checkout) -->
+    <!-- 5. Confirmed E-Ticket & Boarding Pass View (ONLY SHOWN UPON COMPLETED & VERIFIED PAYMENT) -->
     <div class="ticket-success-container" id="ticketSuccessView" style="display:none;">
       <div class="ticket-success-header">
         <div class="success-check-badge">✓</div>
         <h2 style="font-size:26px; font-weight:800; margin:0 0 6px; color:var(--brand-mint);">
-          Booking Confirmed & E-Ticket Issued!
+          Payment Verified & Booking Confirmed!
         </h2>
         <p style="font-size:14px; color:var(--text-muted); margin:0;">
-          Your flight ticket has been confirmed with the airline reservation system. Details sent to <b id="confSentEmail" style="color:var(--brand-cyan);">rajesh.sharma@example.com</b> and SMS to <b id="confSentPhone" style="color:var(--text-main);">+91 9876543210</b>.
+          Payment settled via <b id="confPaymentMethod" style="color:var(--brand-cyan);">UPI</b>. Your flight ticket has been confirmed with the airline reservation system. Details sent to <b id="confSentEmail" style="color:var(--brand-cyan);">rajesh.sharma@example.com</b> and SMS to <b id="confSentPhone" style="color:var(--text-main);">+91 9876543210</b>.
         </p>
+      </div>
+
+      <!-- Prominently Highlighted Booked Seat Banner -->
+      <div class="confirmed-seat-banner">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <span style="font-size:28px;">💺</span>
+          <div>
+            <div style="font-size:11px; text-transform:uppercase; color:var(--brand-mint); font-weight:800; letter-spacing:0.5px;">
+              OFFICIALLY ALLOCATED SEAT
+            </div>
+            <div style="font-size:22px; font-weight:800; color:#ffffff;" id="confSeatBanner">
+              Seat 14A (Window · Forward Cabin)
+            </div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <span class="badge green" style="font-size:12px; padding:6px 14px;">
+            ✓ PAYMENT COMPLETE · SEAT CONFIRMED
+          </span>
+        </div>
       </div>
 
       <!-- Realistic DGCA Boarding Pass -->
@@ -614,7 +634,7 @@
             </div>
             <div class="boarding-info-cell">
               <label>Seat Number</label>
-              <div id="confSeatNo" style="color:var(--brand-cyan);">14A (Window)</div>
+              <div id="confSeatNo" style="color:var(--brand-cyan); font-size:16px; font-weight:800;">14A (Window)</div>
             </div>
             <div class="boarding-info-cell">
               <label>Boarding Gate / Terminal</label>
@@ -683,6 +703,149 @@
         </button>
       </div>
     </div>
+
+    <!-- 6. PAYMENT FAILED VIEW (SHOWN IF PAYMENT IS DECLINED / CANCELLED / INCOMPLETE) -->
+    <div class="payment-failed-container" id="paymentFailedView" style="display:none;">
+      <div class="payment-failed-card">
+        <div class="failed-icon-circle">✕</div>
+        <h2 style="font-size:26px; font-weight:800; margin:0 0 8px; color:var(--brand-rose);">
+          Payment Failed — Booking Incomplete
+        </h2>
+        <p style="font-size:14px; color:var(--text-muted); margin:0 auto; max-width:560px;">
+          We could not process your transaction. Your seat has <b style="color:#ffffff;">NOT</b> been confirmed and no airline PNR was issued.
+        </p>
+
+        <!-- No Seat Allocated Warning Banner -->
+        <div class="failed-no-seat-banner" style="margin-top:20px;">
+          <span>⚠️</span>
+          <span><b>SEATS NOT BOOKED:</b> Airline seat inventory was not reserved because payment authorization failed.</span>
+        </div>
+
+        <!-- Transaction Failure Details -->
+        <div class="failed-details-grid">
+          <div class="failed-detail-item">
+            <label>Transaction ID</label>
+            <span id="failTxnId" style="font-family:'JetBrains Mono',monospace;">TXN-FAIL-829104</span>
+          </div>
+          <div class="failed-detail-item">
+            <label>Amount Attempted</label>
+            <span id="failAmount" style="color:var(--brand-rose);">₹4,914</span>
+          </div>
+          <div class="failed-detail-item">
+            <label>Payment Method</label>
+            <span id="failMethod">UPI (Google Pay)</span>
+          </div>
+          <div class="failed-detail-item">
+            <label>Failure Reason</label>
+            <span id="failReason" style="color:#fb7185;">Bank authorization declined (NPCI Error U16)</span>
+          </div>
+        </div>
+
+        <!-- DGCA / RBI Protection Guarantee -->
+        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; font-size:11.5px; color:var(--text-muted); text-align:left; line-height:1.5;">
+          <b style="color:var(--text-main);">🛡️ Refund & Safety Safeguard (DGCA / RBI Mandate):</b> If money was deducted from your bank account, it will be automatically refunded to your original payment method within 2 to 4 banking hours by your issuing bank.
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:26px;">
+          <button class="btn primary" onclick="retryBookingPayment()" style="background:var(--brand-cyan); color:#000; font-weight:800; display:flex; align-items:center; gap:8px;">
+            <span>🔄</span> <span>Retry Payment (Same Details)</span>
+          </button>
+          <button class="btn light" onclick="changePaymentMethod()" style="display:flex; align-items:center; gap:8px;">
+            <span>💳</span> <span>Choose Another Payment Method</span>
+          </button>
+          <button class="btn light" onclick="window.location.href='/'" style="display:flex; align-items:center; gap:8px;">
+            <span>🔍</span> <span>Search Other Flights</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 7. INTERACTIVE PAYMENT GATEWAY MODAL (SIMULATING NPCI UPI / 3D-SECURE BANK AUTHORIZATION) -->
+  <div class="payment-modal-backdrop" id="paymentModalBackdrop">
+    <div class="payment-gateway-modal" id="paymentModalContent">
+      <div class="pg-modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:20px;">🔒</span>
+          <div>
+            <div style="font-weight:800; font-size:14px; color:var(--text-main);" id="pgModalTitle">NPCI UPI Gateway</div>
+            <div style="font-size:10.5px; color:var(--text-muted);">256-bit Bank Grade Encrypted Session</div>
+          </div>
+        </div>
+        <div style="cursor:pointer; font-size:18px; color:var(--text-muted);" onclick="cancelPaymentAuthorization()">✕</div>
+      </div>
+
+      <div class="pg-modal-body">
+        <!-- Merchant & Amount Strip -->
+        <div class="pg-merchant-strip">
+          <div>
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Payee Merchant</div>
+            <div style="font-size:13px; font-weight:700; color:var(--text-main);">AirfareX India Aviation Pvt Ltd</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Amount Payable</div>
+            <div style="font-size:18px; font-weight:800; color:var(--brand-cyan);" id="pgModalAmount">₹4,914</div>
+          </div>
+        </div>
+
+        <!-- Dynamic Content: UPI vs Card -->
+        <div id="pgModalUpiSection">
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:14px; text-align:center;">
+            Payment request routed via <b style="color:var(--text-main);" id="pgUpiAppDisplay">Google Pay</b> (<span id="pgUpiVpaDisplay" style="color:var(--brand-cyan);">rajesh@okhdfcbank</span>)
+          </div>
+
+          <div class="pg-pin-box">
+            <div style="font-size:12px; font-weight:700; color:var(--text-main); margin-bottom:4px;">
+              Enter 4-Digit or 6-Digit UPI PIN
+            </div>
+            <div style="font-size:11px; color:var(--text-muted);">
+              (For realistic demonstration, enter any 4 digits, or default 1234)
+            </div>
+            <input type="password" id="pgUpiPinInput" class="pg-pin-input" maxlength="6" value="1234" placeholder="••••">
+            <div style="font-size:10.5px; color:var(--brand-mint);">
+              🔒 Protected by NPCI UPI Multi-Factor Authentication
+            </div>
+          </div>
+        </div>
+
+        <div id="pgModalCardSection" style="display:none;">
+          <div class="pg-pin-box">
+            <div style="font-size:12px; font-weight:700; color:var(--text-main); margin-bottom:4px;">
+              Bank 3D-Secure One Time Password (OTP)
+            </div>
+            <div style="font-size:11px; color:var(--text-muted);">
+              Enter 6-digit OTP sent to registered mobile ending in ••3210
+            </div>
+            <input type="password" id="pgCardOtpInput" class="pg-pin-input" maxlength="6" value="481920" placeholder="••••••" style="width:200px;">
+            <div style="font-size:10.5px; color:var(--brand-mint);">
+              🔒 Verified by Visa / Mastercard Identity Check
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Processing Indicator -->
+        <div id="pgProcessingState" style="display:none; text-align:center; padding:16px 0;">
+          <div class="loader-spinner" style="margin:0 auto 12px; width:36px; height:36px; border:3px solid rgba(14,165,233,0.2); border-top-color:var(--brand-cyan); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+          <div style="font-weight:700; font-size:13px; color:var(--text-main);" id="pgProcessText">Contacting NPCI Payment Switch...</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Please do not refresh or press back.</div>
+        </div>
+
+        <!-- Gateway Action Buttons -->
+        <div id="pgActionButtons" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
+          <button type="button" class="btn primary" onclick="authorizePaymentSuccess()" style="width:100%; justify-content:center; padding:13px; font-size:14px; background:linear-gradient(135deg, #10b981, #059669); border:none;">
+            <span>✓ Complete & Authorize Payment</span>
+          </button>
+          
+          <button type="button" class="btn light" onclick="authorizePaymentFailure('User cancelled payment authorization in UPI gateway (Error: U16)')" style="width:100%; justify-content:center; padding:10px; font-size:12.5px; color:var(--brand-rose); border-color:rgba(244,63,94,0.3);">
+            <span>✕ Simulate Payment Decline / Failure</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   </main>
 
