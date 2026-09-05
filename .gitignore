@@ -24,3 +24,5 @@ airfarex.db-shm
 .idea/
 .DS_Store
 Thumbs.db
+*.zip
+
