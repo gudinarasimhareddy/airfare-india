@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# SQLite temporary journal files
+airfarex.db-wal
+airfarex.db-shm
+
+# Environment & Secret variables
+.env
+.env.local
+
+# IDE & Editor files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

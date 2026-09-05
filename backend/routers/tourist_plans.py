@@ -1,0 +1,404 @@
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+import random
+
+router = APIRouter(prefix="/tourist-plans", tags=["Tourist Plans & Packages"])
+
+TOURIST_PACKAGES = [
+    {
+        "id": "tour-goa-3d",
+        "destination": "GOI",
+        "city_name": "Goa (Sun, Sand & Portuguese Heritage)",
+        "package_title": "Goa Coastal Escapade & Sunset Cruise",
+        "duration": "3 Days / 2 Nights",
+        "hero_image": "/assets/images/destination_mumbai.jpg",
+        "tagline": "Golden beaches, UNESCO churches of Old Goa, and private Mandovi river cruise.",
+        "flight": {
+            "airline": "IndiGo",
+            "flight_no": "6E 531",
+            "type": "Non-Stop Return Flight Included",
+            "baggage": "7kg Cabin + 15kg Checked Baggage Included",
+            "seat_pitch": "30\" Standard Recline"
+        },
+        "hotel": {
+            "name": "Radisson Resort & Spa Candolim",
+            "rating": "4.5 / 5 ★★★★☆",
+            "room_type": "Deluxe Pool-View Room",
+            "amenities": ["Daily Buffet Breakfast", "Swimming Pool & Spa Access", "Free High-Speed Wi-Fi", "Welcome Drink"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Arrival, Latin Quarter & Sunset Cruise",
+                "details": "Airport pickup in private AC sedan. Check-in and relax. Afternoon walking tour of colorful Fontainhas (Latin Quarter). Evening 1-hour Mandovi River sunset cruise with Goan folk music."
+            },
+            {
+                "day": "Day 2",
+                "title": "North Goa Beaches & 17th-Century Fort Aguada",
+                "details": "Breakfast at resort. Visit 17th-century Fort Aguada & Sinquerim lighthouse. Afternoon beach leisure and water sports at Calangute/Baga. Candlelight seafood dinner at coastal shack."
+            },
+            {
+                "day": "Day 3",
+                "title": "Old Goa UNESCO Basilica & Departure",
+                "details": "Buffet breakfast. Visit Basilica of Bom Jesus and Sé Cathedral in Old Goa. Souvenir shopping at Panaji municipal market. Private transfer back to Goa Airport for flight home."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 14500,
+            "price_with_offers": 10999,
+            "savings": 3501,
+            "discount_pct": 24,
+            "applied_promo": "AIRXTOUR",
+            "promo_label": "Promo Code AIRXTOUR Applied (Flat ₹3,501 OFF)"
+        },
+        "inclusions": ["Return Flight Tickets", "4-Star Resort 2 Nights", "Daily Breakfast", "Airport Transfers", "Sunset Cruise & Sightseeing"],
+        "exclusions": ["Personal water sports fees", "Lunch & Alcoholic beverages"]
+    },
+    {
+        "id": "tour-jaipur-3d",
+        "destination": "JAI",
+        "city_name": "Jaipur (The Royal Pink City)",
+        "package_title": "Royal Rajasthan Heritage & Fortresses",
+        "duration": "3 Days / 2 Nights",
+        "hero_image": "/assets/images/destination_delhi.jpg",
+        "tagline": "Amber Fort mirror halls, Hawa Mahal, stepwells, and royal Rajasthani banquet.",
+        "flight": {
+            "airline": "Air India",
+            "flight_no": "AI 491",
+            "type": "Direct Return Flight Included",
+            "baggage": "7kg Cabin + 20kg Checked Baggage Included",
+            "seat_pitch": "32\" Extra Legroom + Free Hot Meals"
+        },
+        "hotel": {
+            "name": "ITC Rajputana Luxury Collection",
+            "rating": "4.8 / 5 ★★★★★",
+            "room_type": "Heritage Royal Room",
+            "amenities": ["Royal Rajasthani Thali Dinner", "Complimentary Breakfast", "Kaya Kalp Spa Voucher", "Courtyard Folk Music"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Pink City Palaces & Johari Bazaar",
+                "details": "Airport pickup. Check-in at ITC Rajputana. Visit iconic Hawa Mahal in afternoon golden light and astronomical instruments at Jantar Mantar. Evening street shopping in Johari Bazaar."
+            },
+            {
+                "day": "Day 2",
+                "title": "Amber Fort Mirror Palace & Nahargarh Sunset",
+                "details": "Ascent to majestic Amber Fort with Sheesh Mahal (Mirror Palace). Explore Panna Meena ka Kund geometric stepwell. Sunset tea at Nahargarh Fort overlooking pink city lights."
+            },
+            {
+                "day": "Day 3",
+                "title": "Block Printing Artisan Tour & Departure",
+                "details": "Breakfast. Visit Sanganer hand-block printing workshop and blue pottery center. Visit Jal Mahal (Water Palace). Transfer to Jaipur Airport for return flight."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 13900,
+            "price_with_offers": 9899,
+            "savings": 4001,
+            "discount_pct": 29,
+            "applied_promo": "ROYALJAIPUR",
+            "promo_label": "Promo Code ROYALJAIPUR Applied (Save ₹4,001)"
+        },
+        "inclusions": ["Return Flight Tickets", "5-Star Heritage Hotel", "Daily Breakfast & 1 Royal Dinner", "All Monument Entry Passes", "AC Chauffeur Transport"],
+        "exclusions": ["Camera fees", "Personal shopping"]
+    },
+    {
+        "id": "tour-mumbai-3d",
+        "destination": "BOM",
+        "city_name": "Mumbai (City of Dreams)",
+        "package_title": "Colonial Heritage, Marine Drive & Elephanta",
+        "duration": "3 Days / 2 Nights",
+        "hero_image": "/assets/images/destination_mumbai.jpg",
+        "tagline": "Gateway of India, Marine Drive sunset, rock-cut caves, and Bandra Sea Link.",
+        "flight": {
+            "airline": "Akasa Air",
+            "flight_no": "QP 1102",
+            "type": "Direct Morning Flight",
+            "baggage": "7kg Cabin + 15kg Checked Baggage Included",
+            "seat_pitch": "30.5\" Modern USB Power"
+        },
+        "hotel": {
+            "name": "The Taj Mahal Tower / Trident Nariman Point",
+            "rating": "4.7 / 5 ★★★★★",
+            "room_type": "Sea-View Premier Room",
+            "amenities": ["Harbor-View Breakfast", "Infinity Pool", "24hr Fitness Studio", "Complimentary High Tea"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Gateway of India & Queen's Necklace Walk",
+                "details": "Arrival at BOM T2. Private AC transfer to South Mumbai hotel. Afternoon heritage walk through Fort and Kala Ghoda art precinct. Sunset stroll on Marine Drive followed by street dining at Chowpatty."
+            },
+            {
+                "day": "Day 2",
+                "title": "Elephanta Caves & Bandra-Worli Sea Link",
+                "details": "Morning ferry from Gateway of India to 5th-century Elephanta Island rock-cut temple caves. Afternoon drive across Bandra-Worli Sea Link to Bandstand and seaside cafés."
+            },
+            {
+                "day": "Day 3",
+                "title": "Dharavi Artisans, Crawford Market & Departure",
+                "details": "Breakfast. Visit Crawford Market and Dhobi Ghat. Irani chai & bun maska at Britannia & Co. Evening transfer to airport for departure."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 16200,
+            "price_with_offers": 12499,
+            "savings": 3701,
+            "discount_pct": 23,
+            "applied_promo": "MUMBAIFLY",
+            "promo_label": "Promo Code MUMBAIFLY Applied (Save ₹3,701)"
+        },
+        "inclusions": ["Direct Flight Tickets", "5-Star Harbor-View Hotel", "Daily Breakfast", "Elephanta Ferry Tickets", "Private Airport Transfers"],
+        "exclusions": ["Lunch and personal expenses"]
+    },
+    {
+        "id": "tour-blr-3d",
+        "destination": "BLR",
+        "city_name": "Bengaluru (Garden City & Tech Capital)",
+        "package_title": "Bengaluru Brewpubs, Palaces & Botanical Bliss",
+        "duration": "3 Days / 2 Nights",
+        "hero_image": "/assets/images/destination_delhi.jpg",
+        "tagline": "Lalbagh Glass House, Bangalore Palace, authentic Benne Dosa, and Indiranagar craft beer.",
+        "flight": {
+            "airline": "IndiGo",
+            "flight_no": "6E 404",
+            "type": "Direct Flight",
+            "baggage": "7kg Cabin + 15kg Checked Baggage Included",
+            "seat_pitch": "30\" Value Pitch"
+        },
+        "hotel": {
+            "name": "The Leela Palace Bengaluru",
+            "rating": "4.9 / 5 ★★★★★",
+            "room_type": "Royal Deluxe Garden Room",
+            "amenities": ["Gourmet Breakfast", "Spa Steam & Sauna", "Welcome Silk Scarf", "Evening Classical Flute Concert"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Botanical Heritage & Legendary Benne Dosa",
+                "details": "Arrival at BLR Airport. Chauffeur pickup to hotel. Morning walk at Lalbagh Botanical Garden and Glass House. Authentic Benne Dosa and filter kaapi at Vidyarthi Bhavan. Tour of Bangalore Palace."
+            },
+            {
+                "day": "Day 2",
+                "title": "Science, Art & Craft Beer Tasting Tour",
+                "details": "Breakfast. Visvesvaraya Industrial & Technological Museum and Cubbon Park trails. Evening craft beer & sourdough pizza crawl in Indiranagar & Koramangala microbreweries (Toit / Windmills)."
+            },
+            {
+                "day": "Day 3",
+                "title": "Spiritual Shrines & Departure",
+                "details": "Breakfast. Visit ISKCON Temple and Bull Temple Basavanagudi. Handicraft shopping at Cauvery Arts Emporium. Private AC transfer back to Kempegowda Airport."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 15800,
+            "price_with_offers": 11950,
+            "savings": 3850,
+            "discount_pct": 24,
+            "applied_promo": "BLRSAVINGS",
+            "promo_label": "Promo Code BLRSAVINGS Applied (Save ₹3,850)"
+        },
+        "inclusions": ["Direct Flight Tickets", "Luxury Palace Hotel 2 Nights", "Daily Breakfast", "Sightseeing Cab", "Airport Transfers"],
+        "exclusions": ["Brewery drink tabs", "Personal tips"]
+    },
+    {
+        "id": "tour-delhi-3d",
+        "destination": "DEL",
+        "city_name": "Delhi (Capital Heritage & Culinary Trail)",
+        "package_title": "Grand Monuments, Mughal Flavors & Dilli Haat",
+        "duration": "3 Days / 2 Nights",
+        "hero_image": "/assets/images/hero_aviation.jpg",
+        "tagline": "Red Fort, Qutub Minar, Chandni Chowk street feast, and India Gate evening stroll.",
+        "flight": {
+            "airline": "Air India Express",
+            "flight_no": "IX 144",
+            "type": "Direct Flight",
+            "baggage": "7kg Cabin + 15kg Checked Baggage Included",
+            "seat_pitch": "30\" Pitch"
+        },
+        "hotel": {
+            "name": "The Claridges New Delhi",
+            "rating": "4.7 / 5 ★★★★★",
+            "room_type": "Heritage Heritage Room",
+            "amenities": ["Buffet Breakfast", "Lutyens Garden Access", "Pick-and-Drop Luxury Cab", "Evening High Tea"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Old Delhi Culinary Trail & Red Fort",
+                "details": "Morning arrival at IGI Airport. Check-in at The Claridges. Cycle rickshaw food safari in Chandni Chowk, Paranthe Wali Gali, and Karim's kebabs. Visit UNESCO Red Fort and Jama Masjid."
+            },
+            {
+                "day": "Day 2",
+                "title": "Qutub Minar, Humayun's Tomb & India Gate",
+                "details": "Breakfast. Visit soaring Qutub Minar and Humayun's Tomb gardens. Sunset walk along Kartavya Path and illuminated India Gate memorial."
+            },
+            {
+                "day": "Day 3",
+                "title": "Akshardham Temple & Dilli Haat Crafts",
+                "details": "Breakfast. Visit peaceful Akshardham temple complex and cultural boat ride. Artisanal crafts shopping at Dilli Haat INA. Transfer to Airport for return flight."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 14900,
+            "price_with_offers": 11200,
+            "savings": 3700,
+            "discount_pct": 25,
+            "applied_promo": "DELHIESCAPE",
+            "promo_label": "Promo Code DELHIESCAPE Applied (Save ₹3,700)"
+        },
+        "inclusions": ["Return Flight Tickets", "5-Star Heritage Hotel", "Daily Breakfast", "Chauffeur AC Cab", "Monument Entry"],
+        "exclusions": ["Personal meals outside hotel"]
+    },
+    {
+        "id": "tour-kolkata-3d",
+        "destination": "CCU",
+        "city_name": "Kolkata (The City of Joy & Classical Arts)",
+        "package_title": "Victoria Memorial, Hooghly Ferry & Sweet Delights",
+        "duration": "3 Days / 2 Nights",
+        "hero_image": "/assets/images/destination_mumbai.jpg",
+        "tagline": "Howrah Bridge, Victoria Memorial, clay artisans of Kumartuli, and authentic Mishti Doi.",
+        "flight": {
+            "airline": "SpiceJet",
+            "flight_no": "SG 822",
+            "type": "Direct Return Flight",
+            "baggage": "7kg Cabin + 15kg Checked Baggage Included",
+            "seat_pitch": "29.5\" Pitch"
+        },
+        "hotel": {
+            "name": "The Oberoi Grand Kolkata",
+            "rating": "4.8 / 5 ★★★★★",
+            "room_type": "Classic Heritage Room",
+            "amenities": ["Gourmet Breakfast", "Colonial Courtyard Pool", "Traditional Bengali High Tea", "Spa Credit"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "White Marble Majesty & Sunset Ferry",
+                "details": "Airport pickup. Check-in at Grand Dame Oberoi. Tour Victoria Memorial and gardens. Authentic Bengali lunch at 6 Ballygunge Place. Sunset ferry on the Hooghly overlooking Howrah Bridge."
+            },
+            {
+                "day": "Day 2",
+                "title": "Potters' Colony, College Street & Park Street Jazz",
+                "details": "Breakfast. Visit Kumartuli idol-sculpting lanes. Coffee and intellectual discussions at Indian Coffee House, College Street. Evening dinner and live jazz music on Park Street (Peter Cat Chelo Kebab)."
+            },
+            {
+                "day": "Day 3",
+                "title": "Dakshineswar Temple, Sweets & Departure",
+                "details": "Breakfast. Visit Dakshineswar Kali Temple & boat to Belur Math. Authentic sweet sampling (KC Das Sandesh & Mishti Doi). Transfer to Netaji Subhash Airport."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 13800,
+            "price_with_offers": 10250,
+            "savings": 3550,
+            "discount_pct": 26,
+            "applied_promo": "KOLKATADEAL",
+            "promo_label": "Promo Code KOLKATADEAL Applied (Save ₹3,550)"
+        },
+        "inclusions": ["Return Flights", "5-Star Oberoi Hotel 2 Nights", "Daily Breakfast", "AC Private Transport", "Hooghly Ferry Passes"],
+        "exclusions": ["Personal meals & shopping"]
+    }
+]
+
+def _normalize_plan(p: Dict[str, Any]) -> Dict[str, Any]:
+    item = dict(p)
+    item["title"] = p.get("package_title", p.get("title", "Holiday Package"))
+    item["image_url"] = p.get("hero_image", p.get("image_url", "/assets/images/destination_mumbai.jpg"))
+    item["destination"] = p.get("destination", "DEL")
+    
+    # Normalize flight
+    flight = dict(p.get("flight", {}))
+    if "carrier" not in flight:
+        flight["carrier"] = flight.get("airline", "IndiGo")
+    if "sector" not in flight:
+        flight["sector"] = f"{flight.get('type', 'Return Flights')} ({flight.get('flight_no', '')})"
+    item["flight"] = flight
+
+    # Normalize hotel rating
+    hotel = dict(p.get("hotel", {}))
+    if isinstance(hotel.get("rating"), str):
+        try:
+            hotel["rating_num"] = float(hotel["rating"].split("/")[0].strip())
+        except Exception:
+            hotel["rating_num"] = 4.5
+    item["hotel"] = hotel
+    return item
+
+class BookTouristPlanRequest(BaseModel):
+    plan_id: str
+    traveler_name: Optional[str] = None
+    passenger_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    contact: Optional[str] = None
+    travel_date: str
+    passengers_count: Optional[int] = 1
+    pax_count: Optional[int] = 1
+    promo_code: Optional[str] = None
+
+@router.get("")
+def list_tourist_plans(destination: Optional[str] = Query(None, description="Filter by airport destination code")):
+    """List all tourist travel packages with flight tickets, hotels, itineraries, and side-by-side offer prices."""
+    normalized = [_normalize_plan(p) for p in TOURIST_PACKAGES]
+    if destination:
+        dest_upper = destination.upper().strip()
+        filtered = [
+            p for p in normalized 
+            if p["destination"] == dest_upper or dest_upper in p.get("city_name", "").upper()
+        ]
+        return {"total": len(filtered), "plans": filtered, "packages": filtered}
+    return {"total": len(normalized), "plans": normalized, "packages": normalized}
+
+@router.get("/{plan_id}")
+def get_tourist_plan(plan_id: str):
+    """Retrieve detailed tourist package specification."""
+    plan = next((p for p in TOURIST_PACKAGES if p["id"] == plan_id), None)
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Tourist package '{plan_id}' not found.")
+    return _normalize_plan(plan)
+
+@router.post("/book")
+def book_tourist_plan(req: BookTouristPlanRequest):
+    """Book tourist package and generate confirmation voucher."""
+    plan = next((p for p in TOURIST_PACKAGES if p["id"] == req.plan_id), None)
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Tourist package '{req.plan_id}' not found.")
+
+    pax = req.pax_count or req.passengers_count or 1
+    name = req.traveler_name or req.passenger_name or "Valued Guest"
+    pnr = f"PKG-AIRX{random.randint(1000, 9999)}"
+    hotel_booking_id = f"HTL-{random.randint(10000, 99999)}"
+    
+    total_without_offer = plan["pricing"]["price_without_offers"] * pax
+    total_with_offer = plan["pricing"]["price_with_offers"] * pax
+    total_saved = total_without_offer - total_with_offer
+
+    carrier = plan["flight"].get("carrier", plan["flight"].get("airline", "IndiGo"))
+    sector = plan["flight"].get("sector", plan["flight"].get("type", "Return Flights"))
+
+    return {
+        "status": "confirmed",
+        "booking_reference": pnr,
+        "hotel_voucher": hotel_booking_id,
+        "plan_title": plan.get("package_title") or plan.get("title"),
+        "package_title": plan.get("package_title") or plan.get("title"),
+        "destination": plan["city_name"],
+        "traveler_name": name,
+        "passenger_name": name,
+        "travel_date": req.travel_date,
+        "pax_count": pax,
+        "amount_paid": total_with_offer,
+        "flight_details": f"{carrier} ({sector})",
+        "hotel_details": f"{plan['hotel']['name']} ({plan['hotel']['room_type']})",
+        "pricing_breakdown": {
+            "regular_total_without_offers": total_without_offer,
+            "final_payable_with_offers": total_with_offer,
+            "total_savings": total_saved,
+            "applied_promo": plan["pricing"]["applied_promo"]
+        },
+        "inclusions": plan["inclusions"],
+        "message": f"Congratulations {name}! Your holiday package to {plan['city_name']} is confirmed under PNR {pnr}. You saved ₹{total_saved:,} with our offer rate."
+    }
+

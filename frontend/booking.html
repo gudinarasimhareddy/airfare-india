@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="aurora">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AirfareX India — Flight Details, GST Breakdown & UPI Checkout</title>
+  <meta name="description" content="Complete flight details, Indian DGCA fee breakdown (Base, UDF, ASF, YQ, 5% GST), and secure zero-fee UPI payment methods for domestic flights.">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/booking.css">
+</head>
+<body class="booking-page-body">
+
+  <!-- Ambient Glowing Mesh Background -->
+  <div class="ambient-mesh-canvas" aria-hidden="true">
+    <div class="mesh-orb orb-1"></div>
+    <div class="mesh-orb orb-2"></div>
+    <div class="mesh-orb orb-3"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="header-top">
+    <div class="brand-wrapper" onclick="window.location.href = '/'">
+      <div class="brand-logo-icon">✈</div>
+      <div>
+        <div class="brand-text">Airfare<span>X</span> India</div>
+        <span class="brand-sub">Secure Aviation Booking & Checkout</span>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:16px;">
+      <a href="/" class="btn sm light" style="text-decoration:none; display:flex; align-items:center; gap:6px;">
+        <span>←</span> <span>Back to Search & Packages</span>
+      </a>
+      <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleBookingTheme()" title="Toggle Dark/Light Mode">🌙</button>
+    </div>
+  </header>
+
+  <!-- Main Booking Container -->
+  <main class="booking-container">
+
+    <!-- Active Stepper -->
+    <div class="checkout-stepper" id="checkoutStepper">
+      <div class="step-item active" id="step1Indicator">
+        <div class="step-num">1</div>
+        <span>Flight Review & Fees</span>
+      </div>
+      <div class="step-divider" id="stepDiv1"></div>
+      <div class="step-item" id="step2Indicator">
+        <div class="step-num">2</div>
+        <span>Passenger & GST</span>
+      </div>
+      <div class="step-divider" id="stepDiv2"></div>
+      <div class="step-item" id="step3Indicator">
+        <div class="step-num">3</div>
+        <span>UPI Payment & E-Ticket</span>
+      </div>
+    </div>
+
+    <!-- Booking Content Grid (Shown during booking) -->
+    <div class="checkout-grid" id="checkoutFormSection">
+
+      <!-- Left Column: Flight Info, Google Insights, Passenger Form, UPI -->
+      <div class="checkout-left-col">
+
+        <!-- 1. Flight Review Card -->
+        <div class="flight-review-card">
+          <div class="flight-review-header">
+            <div class="flight-review-airline">
+              <div class="airline-avatar-badge" id="bAirlineAvatar">✈</div>
+              <div>
+                <h3 style="margin:0; font-size:17px; color:var(--text-main);" id="bAirlineName">IndiGo</h3>
+                <div style="font-size:12px; color:var(--text-muted);">
+                  Flight <b id="bFlightNo" style="color:var(--brand-cyan);">6E-205</b> · <span id="bAircraft">Airbus A320neo</span>
+                </div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <span class="badge blue" id="bCabinBadge">Economy Standard</span>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;" id="bTravelDate">Travel Date: --</div>
+            </div>
+          </div>
+
+          <!-- Schedule Strip -->
+          <div class="flight-schedule-strip">
+            <div class="schedule-point">
+              <div class="schedule-time" id="bDepTime">07:15</div>
+              <div class="schedule-code" id="bOriginCode">HYD</div>
+              <div class="schedule-city" id="bOriginCity">Hyderabad</div>
+            </div>
+
+            <div class="schedule-track-box">
+              <span class="schedule-duration" id="bDuration">2h 15m</span>
+              <div class="schedule-line"></div>
+              <span class="schedule-stops" id="bStops">Nonstop Direct</span>
+            </div>
+
+            <div class="schedule-point dest">
+              <div class="schedule-time" id="bArrTime">09:30</div>
+              <div class="schedule-code" id="bDestCode">DEL</div>
+              <div class="schedule-city" id="bDestCity">Delhi (IGI)</div>
+            </div>
+          </div>
+
+          <!-- Flight Meta Tags -->
+          <div class="flight-meta-tags">
+            <span class="meta-chip" id="bTerminalTag">📍 Terminal: T2</span>
+            <span class="meta-chip" id="bGateTag">🚪 Gate: G12</span>
+            <span class="meta-chip" id="bBaggageTag">🧳 15kg Check-in + 7kg Cabin</span>
+            <span class="meta-chip" id="bSeatPitchTag">💺 30" Seat Pitch</span>
+            <span class="meta-chip" id="bCo2Tag">🌱 135 kg CO₂e</span>
+          </div>
+
+          <!-- Google Flights 30-Day Historical Trend & Price Insight Widget -->
+          <div class="google-insight-banner" id="googleInsightWidget">
+            <div class="google-insight-left">
+              <span class="google-badge-icon">📊</span>
+              <div class="google-insight-text">
+                <h4 id="googleInsightTitle">Google Flights 30-Day Intelligence</h4>
+                <p id="googleInsightDesc">Analyzing last 30 days of observed domestic quotes for this sector...</p>
+              </div>
+            </div>
+            <div>
+              <span class="google-insight-pill low" id="googleInsightPill">
+                <span>✓</span> <span id="googleInsightVerdict">Price is Low</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Passenger & Contact Information -->
+        <div class="checkout-section-card">
+          <div class="section-card-title">
+            <span>👤</span>
+            <span>Passenger Details</span>
+            <span class="badge blue">Adult (12+ yrs)</span>
+          </div>
+
+          <div class="form-grid-3">
+            <div class="field-group">
+              <label>Title *</label>
+              <select id="paxTitle">
+                <option value="Mr">Mr.</option>
+                <option value="Ms">Ms.</option>
+                <option value="Mrs">Mrs.</option>
+                <option value="Dr">Dr.</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label>First & Middle Name *</label>
+              <input type="text" id="paxFirstName" placeholder="e.g. Rajesh" value="Rajesh" required>
+            </div>
+            <div class="field-group">
+              <label>Last Name *</label>
+              <input type="text" id="paxLastName" placeholder="e.g. Sharma" value="Sharma" required>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label>Age *</label>
+              <input type="number" id="paxAge" min="12" max="110" value="29" required>
+            </div>
+            <div class="field-group">
+              <label>Gender *</label>
+              <div class="radio-pills-row">
+                <div class="radio-pill-btn active" data-gender="Male" onclick="selectGender(this)">Male</div>
+                <div class="radio-pill-btn" data-gender="Female" onclick="selectGender(this)">Female</div>
+                <div class="radio-pill-btn" data-gender="Other" onclick="selectGender(this)">Other</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label>Mobile Number (For WhatsApp / SMS Ticket) *</label>
+              <div style="display:flex; gap:8px;">
+                <span style="display:flex; align-items:center; padding:0 12px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:var(--radius-md); font-weight:700; font-size:13px;">+91</span>
+                <input type="tel" id="paxPhone" placeholder="9876543210" value="9876543210" maxlength="10" required>
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Email Address (For Tax Invoice & E-Ticket) *</label>
+              <input type="email" id="paxEmail" placeholder="rajesh.sharma@example.com" value="rajesh.sharma@example.com" required>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label>Complimentary Meal Choice (DGCA Domestic Flights)</label>
+            <select id="paxMeal">
+              <option value="Indian Vegetarian Thali">Indian Vegetarian Thali (Standard)</option>
+              <option value="Jain Special Vegetarian">Jain Special Vegetarian (No Onion/Garlic)</option>
+              <option value="South Indian Masala Dosa Meal">South Indian Masala Dosa Breakfast</option>
+              <option value="Hyderabadi Chicken Biryani">Hyderabadi Chicken Biryani (Non-Veg)</option>
+              <option value="Diabetic / Low Calorie Meal">Diabetic / Low Calorie Meal</option>
+              <option value="No Meal Required">No Meal Required</option>
+            </select>
+          </div>
+
+          <!-- GST Details Accordion for Business / Input Tax Credit -->
+          <div style="margin-top:16px; padding:12px 14px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+            <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="toggleGstFields()">
+              <label style="margin:0; cursor:pointer; display:flex; align-items:center; gap:8px; font-weight:700; font-size:12.5px; color:var(--text-main);">
+                <input type="checkbox" id="gstCheckbox" onchange="toggleGstFields()" style="width:16px; height:16px; accent-color:var(--brand-cyan);">
+                <span>Use GSTIN for Business Travel & Input Tax Credit (ITC - SAC 9964)</span>
+              </label>
+              <span id="gstToggleIcon" style="font-size:11px; color:var(--text-muted);">▼</span>
+            </div>
+
+            <div id="gstFieldsBox" style="display:none; margin-top:14px; padding-top:12px; border-top:1px dashed var(--border-color);">
+              <div class="form-grid-2">
+                <div class="field-group">
+                  <label>Registered Company Name</label>
+                  <input type="text" id="gstCompanyName" placeholder="Acme Technologies Pvt Ltd">
+                </div>
+                <div class="field-group">
+                  <label>15-Digit GSTIN Number</label>
+                  <input type="text" id="gstNumber" placeholder="36AAACA1234A1Z5" maxlength="15" style="text-transform:uppercase;">
+                </div>
+              </div>
+              <div style="font-size:11px; color:var(--brand-mint); margin-top:4px;">
+                ✓ GST tax invoice will be generated with SAC Code 9964 for 100% ITC claim.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Smart Flight Add-Ons -->
+        <div class="checkout-section-card">
+          <div class="section-card-title">
+            <span>✨</span>
+            <span>Recommended Travel Add-Ons</span>
+          </div>
+
+          <!-- DigiYatra -->
+          <div class="addon-item" id="addonDigiYatra" onclick="toggleAddon('digiyatra', 99)">
+            <div class="addon-left">
+              <input type="checkbox" class="addon-checkbox" id="checkDigiYatra" onclick="event.stopPropagation(); toggleAddon('digiyatra', 99);">
+              <span class="addon-icon">⚡</span>
+              <div class="addon-info">
+                <h4>DigiYatra Biometric Express Check-in</h4>
+                <p>Skip airport lines with facial recognition boarding pass integration at Delhi & Hyderabad.</p>
+              </div>
+            </div>
+            <div class="addon-price">+₹99</div>
+          </div>
+
+          <!-- Travel Insurance -->
+          <div class="addon-item" id="addonInsurance" onclick="toggleAddon('insurance', 199)">
+            <div class="addon-left">
+              <input type="checkbox" class="addon-checkbox" id="checkInsurance" onclick="event.stopPropagation(); toggleAddon('insurance', 199);">
+              <span class="addon-icon">🛡️</span>
+              <div class="addon-info">
+                <h4>Comprehensive Domestic Flight Insurance</h4>
+                <p>Up to ₹5,00,000 accidental cover, ₹15,000 for lost baggage, and ₹5,000 for flight delays > 2 hours.</p>
+              </div>
+            </div>
+            <div class="addon-price">+₹199</div>
+          </div>
+
+          <!-- Extra Baggage -->
+          <div class="addon-item" id="addonBaggage" onclick="toggleAddon('baggage', 1350)">
+            <div class="addon-left">
+              <input type="checkbox" class="addon-checkbox" id="checkBaggage" onclick="event.stopPropagation(); toggleAddon('baggage', 1350);">
+              <span class="addon-icon">🧳</span>
+              <div class="addon-info">
+                <h4>Extra 5kg Check-in Baggage</h4>
+                <p>Save 40% vs airport counter excess baggage rates (pre-paid allowance).</p>
+              </div>
+            </div>
+            <div class="addon-price">+₹1,350</div>
+          </div>
+        </div>
+
+        <!-- 4. Payment Gateway & UPI Methods -->
+        <div class="checkout-section-card" id="paymentSectionCard">
+          <div class="section-card-title">
+            <span>💳</span>
+            <span>Select Payment Method</span>
+            <span class="badge green">Zero Fee on UPI</span>
+          </div>
+
+          <!-- Payment Tabs -->
+          <div class="payment-tabs-header">
+            <button class="payment-tab-btn active" id="tabBtnUpi" onclick="switchPaymentTab('upi')">
+              <span>⚡ UPI (GPay, PhonePe, Paytm, BHIM)</span>
+              <span class="badge green" style="padding:2px 6px; font-size:10px;">₹0 Fee</span>
+            </button>
+            <button class="payment-tab-btn" id="tabBtnCard" onclick="switchPaymentTab('card')">
+              <span>💳 Credit / Debit Card (Visa, RuPay, MC)</span>
+            </button>
+            <button class="payment-tab-btn" id="tabBtnNb" onclick="switchPaymentTab('netbanking')">
+              <span>🏛️ Net Banking (SBI, HDFC, ICICI)</span>
+            </button>
+          </div>
+
+          <!-- TAB 1: UPI CONTENT -->
+          <div id="tabContentUpi">
+            <div class="upi-fee-waiver-banner">
+              <span>🎉</span>
+              <div>
+                <b>Zero Convenience Fee on UPI:</b> You save ₹350 gateway surcharge by paying directly via any UPI app or UPI ID!
+              </div>
+            </div>
+
+            <!-- Quick App Choosers -->
+            <div style="font-size:12px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase;">
+              Popular UPI Apps
+            </div>
+            <div class="upi-apps-row">
+              <div class="upi-app-chip active" onclick="selectUpiApp('Google Pay')">
+                <span>🟢</span> <b>Google Pay</b>
+              </div>
+              <div class="upi-app-chip" onclick="selectUpiApp('PhonePe')">
+                <span>🟣</span> <b>PhonePe</b>
+              </div>
+              <div class="upi-app-chip" onclick="selectUpiApp('Paytm')">
+                <span>🔵</span> <b>Paytm UPI</b>
+              </div>
+              <div class="upi-app-chip" onclick="selectUpiApp('BHIM')">
+                <span>🇮🇳</span> <b>BHIM UPI</b>
+              </div>
+              <div class="upi-app-chip" onclick="selectUpiApp('CRED UPI')">
+                <span>💎</span> <b>CRED UPI</b>
+              </div>
+            </div>
+
+            <!-- Dual Option: Scan Dynamic QR or Enter UPI ID -->
+            <div class="upi-dual-methods">
+              <!-- Method A: Dynamic QR Code -->
+              <div class="upi-method-card">
+                <div style="font-weight:700; font-size:13px; color:var(--text-main); margin-bottom:4px;">
+                  Scan & Pay via Any UPI App
+                </div>
+                <div style="font-size:11px; color:var(--text-muted);">
+                  Open GPay / PhonePe / Paytm camera
+                </div>
+
+                <div class="upi-qr-box">
+                  <div class="upi-scan-line"></div>
+                  <!-- SVG Mock QR Code with AirfareX UPI Intent -->
+                  <svg width="130" height="130" viewBox="0 0 100 100" style="display:block; margin:0 auto;">
+                    <rect width="100" height="100" fill="#ffffff" />
+                    <!-- Top-Left Corner -->
+                    <rect x="5" y="5" width="30" height="30" fill="#0f172a" />
+                    <rect x="10" y="10" width="20" height="20" fill="#ffffff" />
+                    <rect x="15" y="15" width="10" height="10" fill="#0f172a" />
+                    <!-- Top-Right Corner -->
+                    <rect x="65" y="5" width="30" height="30" fill="#0f172a" />
+                    <rect x="70" y="10" width="20" height="20" fill="#ffffff" />
+                    <rect x="75" y="15" width="10" height="10" fill="#0f172a" />
+                    <!-- Bottom-Left Corner -->
+                    <rect x="5" y="65" width="30" height="30" fill="#0f172a" />
+                    <rect x="10" y="70" width="20" height="20" fill="#ffffff" />
+                    <rect x="15" y="75" width="10" height="10" fill="#0f172a" />
+                    <!-- Matrix Dots -->
+                    <rect x="42" y="10" width="16" height="6" fill="#0ea5e9" />
+                    <rect x="42" y="24" width="8" height="12" fill="#0f172a" />
+                    <rect x="12" y="42" width="22" height="6" fill="#0f172a" />
+                    <rect x="42" y="42" width="16" height="16" fill="#2563eb" />
+                    <rect x="65" y="42" width="12" height="8" fill="#0f172a" />
+                    <rect x="80" y="54" width="14" height="6" fill="#0f172a" />
+                    <rect x="42" y="65" width="10" height="18" fill="#0f172a" />
+                    <rect x="60" y="65" width="20" height="6" fill="#0ea5e9" />
+                    <rect x="65" y="78" width="28" height="14" fill="#0f172a" />
+                  </svg>
+                </div>
+
+                <div class="upi-timer" id="qrTimer">
+                  ⏳ QR expires in: <span id="qrTimerCount">09:59</span>
+                </div>
+                <div style="font-size:10.5px; color:var(--text-muted); margin-top:4px;">
+                  Real-time NPCI settlement to AirfareX VPA
+                </div>
+              </div>
+
+              <!-- Method B: Virtual Payment Address (VPA) -->
+              <div class="upi-method-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                  <div style="font-weight:700; font-size:13px; color:var(--text-main); margin-bottom:4px;">
+                    Pay via UPI ID / VPA
+                  </div>
+                  <div style="font-size:11px; color:var(--text-muted);">
+                    Enter your registered UPI address
+                  </div>
+
+                  <div class="field-group" style="margin-top:16px;">
+                    <div class="upi-vpa-box">
+                      <input type="text" id="upiIdInput" placeholder="e.g. yourname@oksbi" value="rajesh@okhdfcbank">
+                      <button type="button" class="btn sm light" onclick="verifyVpa()" style="padding:0 14px;">Verify</button>
+                    </div>
+                  </div>
+
+                  <div id="vpaStatusBadge" style="font-size:11.5px; color:var(--brand-mint); font-weight:700; margin-top:6px; display:block;">
+                    ✓ Verified: RAJESH SHARMA (HDFC Bank)
+                  </div>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.03); border-radius:8px; padding:10px; font-size:11.5px; color:var(--text-muted); margin-top:14px; text-align:left;">
+                  ℹ A payment request of <b id="upiRequestAmount" style="color:var(--brand-cyan);">₹5,420</b> will be sent to your UPI application. Accept the prompt to instantly confirm your ticket.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: CARDS CONTENT -->
+          <div id="tabContentCard" style="display:none;">
+            <div style="padding:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+              <div class="field-group">
+                <label>Card Number</label>
+                <input type="text" placeholder="4111 2222 3333 4444" maxlength="19">
+              </div>
+              <div class="form-grid-2">
+                <div class="field-group">
+                  <label>Expiry Date</label>
+                  <input type="text" placeholder="MM/YY" maxlength="5">
+                </div>
+                <div class="field-group">
+                  <label>CVV / CVC</label>
+                  <input type="password" placeholder="•••" maxlength="3">
+                </div>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-subtle);">
+                * Standard card gateway convenience fee of ₹350 applies. Switch to UPI for ₹0 fee.
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: NET BANKING CONTENT -->
+          <div id="tabContentNb" style="display:none;">
+            <div style="padding:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+              <div class="field-group">
+                <label>Select Bank</label>
+                <select>
+                  <option>State Bank of India (SBI)</option>
+                  <option>HDFC Bank</option>
+                  <option>ICICI Bank</option>
+                  <option>Axis Bank</option>
+                  <option>Punjab National Bank</option>
+                  <option>Kotak Mahindra Bank</option>
+                </select>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-subtle);">
+                You will be securely redirected to your bank's retail internet banking portal.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Sticky Fare & Taxes Decomposition -->
+      <div class="checkout-right-col">
+        <div class="sticky-fare-summary">
+          <h3 style="margin:0 0 14px; font-size:17px; color:var(--text-main); display:flex; justify-content:space-between; align-items:center;">
+            <span>Fare & Taxes Breakdown</span>
+            <span class="badge blue">1 Passenger</span>
+          </h3>
+
+          <!-- Fee Decomposition Table -->
+          <table class="fare-breakdown-table">
+            <tbody>
+              <!-- Base Fare -->
+              <tr>
+                <td>Base Airfare (Airline Rack)</td>
+                <td id="feeBaseFare">₹4,120</td>
+              </tr>
+
+              <!-- Fuel Surcharge (YQ) -->
+              <tr>
+                <td>Airline Fuel Surcharge (YQ)</td>
+                <td id="feeYq">₹450</td>
+              </tr>
+
+              <!-- Airport User Development Fee (UDF) -->
+              <tr>
+                <td>User Development Fee (UDF)</td>
+                <td id="feeUdf">₹380</td>
+              </tr>
+
+              <!-- Aviation Security Fee (ASF/PSF - Statutory) -->
+              <tr>
+                <td>Aviation Security Fee (ASF/PSF)</td>
+                <td id="feeAsf">₹236</td>
+              </tr>
+
+              <!-- GST Section (5% Total) -->
+              <tr class="fee-sub-row">
+                <td>↳ Central GST (CGST @ 2.5%)</td>
+                <td id="feeCgst">₹114</td>
+              </tr>
+              <tr class="fee-sub-row">
+                <td>↳ State GST (SGST @ 2.5%)</td>
+                <td id="feeSgst">₹114</td>
+              </tr>
+              <tr>
+                <td>Total Indian GST (5% SAC 9964)</td>
+                <td id="feeTotalGst" style="color:var(--brand-mint);">₹228</td>
+              </tr>
+
+              <!-- Add-ons Subtotal -->
+              <tr id="feeAddonsRow" style="display:none;">
+                <td>Selected Travel Add-ons</td>
+                <td id="feeAddonsVal">₹0</td>
+              </tr>
+
+              <!-- Promo Code Discount -->
+              <tr id="feeDiscountRow" style="display:none; color:var(--brand-mint);">
+                <td>Promo Coupon Savings</td>
+                <td id="feeDiscountVal" style="color:var(--brand-mint);">-₹0</td>
+              </tr>
+
+              <!-- Convenience Fee -->
+              <tr class="divider-row">
+                <td>Payment Convenience Fee</td>
+                <td id="feeConvenience">
+                  <span style="text-decoration:line-through; font-size:11.5px; color:var(--text-subtle);">₹350</span>
+                  <span style="color:var(--brand-mint); font-weight:800; margin-left:4px;">₹0 (Waived)</span>
+                </td>
+              </tr>
+
+              <!-- Total Payable -->
+              <tr class="total-row">
+                <td>Total Net Payable</td>
+                <td id="feeTotalPayable">₹5,414</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Promo Code Input Box -->
+          <div class="promo-apply-box">
+            <input type="text" id="couponInput" placeholder="AIRX500 / UPIFIRST" value="AIRX500">
+            <button type="button" class="btn sm" onclick="applyBookingCoupon()" style="padding:0 14px;">Apply</button>
+          </div>
+
+          <div class="promo-tag-badge" id="appliedPromoBadge">
+            <span>🏷️ <b>AIRX500</b> Applied (₹500 Instant Discount)</span>
+            <span style="cursor:pointer; font-weight:800;" onclick="removeBookingCoupon()">✕</span>
+          </div>
+
+          <!-- Big Pay Now CTA -->
+          <button class="pay-btn-main" id="payNowBtn" onclick="submitBookingCheckout()">
+            <span>🔒 Pay <span id="btnPayAmount">₹4,914</span> & Book Flight</span>
+          </button>
+
+          <!-- Security & DGCA Compliance Badges -->
+          <div class="pay-security-trust">
+            <span>🛡️ 256-bit SSL</span>
+            <span>·</span>
+            <span>🏛️ DGCA Compliant</span>
+            <span>·</span>
+            <span>⚡ Instant UPI Refund</span>
+          </div>
+
+          <div style="margin-top:16px; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid var(--border-color); font-size:11px; color:var(--text-muted); line-height:1.4;">
+            * Cancellation policy: Full refund of statutory taxes (UDF, ASF, 5% GST) upon ticket cancellation as mandated by DGCA CAR Section 3 Series M Part II.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 5. Confirmed E-Ticket & Boarding Pass View (Shown upon successful checkout) -->
+    <div class="ticket-success-container" id="ticketSuccessView" style="display:none;">
+      <div class="ticket-success-header">
+        <div class="success-check-badge">✓</div>
+        <h2 style="font-size:26px; font-weight:800; margin:0 0 6px; color:var(--brand-mint);">
+          Booking Confirmed & E-Ticket Issued!
+        </h2>
+        <p style="font-size:14px; color:var(--text-muted); margin:0;">
+          Your flight ticket has been confirmed with the airline reservation system. Details sent to <b id="confSentEmail" style="color:var(--brand-cyan);">rajesh.sharma@example.com</b> and SMS to <b id="confSentPhone" style="color:var(--text-main);">+91 9876543210</b>.
+        </p>
+      </div>
+
+      <!-- Realistic DGCA Boarding Pass -->
+      <div class="boarding-pass-card">
+        <div class="boarding-pass-top">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:24px;">✈</span>
+            <div>
+              <div style="font-size:18px; font-weight:800; letter-spacing:0.5px;" id="confAirlineHeader">IndiGo</div>
+              <div style="font-size:11px; opacity:0.8;">DGCA Verified Electronic Passenger Ticket</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:12px; opacity:0.8;">E-TICKET NUMBER</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700;" id="confEticketNo">098-8492019482</div>
+          </div>
+        </div>
+
+        <div class="boarding-pass-body">
+          <div class="boarding-pnr-banner">
+            <div>
+              <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Airline PNR Reference</div>
+              <div class="pnr-display" id="confPnr">6E-8491</div>
+            </div>
+            <div style="text-align:center;">
+              <span class="badge green" style="font-size:12px; padding:6px 14px;">CONFIRMED · SEAT ALLOCATED</span>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">UPI UTR Reference</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--brand-mint);" id="confUtr">UPI/428194018291</div>
+            </div>
+          </div>
+
+          <div class="boarding-grid-info">
+            <div class="boarding-info-cell">
+              <label>Passenger Name</label>
+              <div id="confPaxName">MR. RAJESH SHARMA</div>
+            </div>
+            <div class="boarding-info-cell">
+              <label>Flight & Aircraft</label>
+              <div id="confFlightDetails">6E-205 (A320neo)</div>
+            </div>
+            <div class="boarding-info-cell">
+              <label>Seat Number</label>
+              <div id="confSeatNo" style="color:var(--brand-cyan);">14A (Window)</div>
+            </div>
+            <div class="boarding-info-cell">
+              <label>Boarding Gate / Terminal</label>
+              <div id="confGateTerminal">Gate G12 · T2</div>
+            </div>
+          </div>
+
+          <div class="boarding-grid-info">
+            <div class="boarding-info-cell">
+              <label>Origin Hub</label>
+              <div id="confOrigin">HYD (Hyderabad)</div>
+            </div>
+            <div class="boarding-info-cell">
+              <label>Destination</label>
+              <div id="confDest">DEL (Delhi IGI)</div>
+            </div>
+            <div class="boarding-info-cell">
+              <label>Departure Date & Time</label>
+              <div id="confDepTime">07:15 AM · 12 Sep</div>
+            </div>
+            <div class="boarding-info-cell">
+              <label>Baggage Allowance</label>
+              <div id="confBaggage">15kg Check-in + 7kg Cabin</div>
+            </div>
+          </div>
+
+          <!-- Barcode representation -->
+          <div class="barcode-strip">
+            <div class="barcode-simulated"></div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#333; margin-top:6px; letter-spacing:3px;" id="confBarcodeText">
+              M1SHARMA/RAJESH 6E205 12SEP HYDDEL ETKT0988492019482
+            </div>
+          </div>
+
+          <!-- Statutory GST Tax Invoice Details (SAC 9964) -->
+          <div class="tax-invoice-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-weight:700; color:var(--text-main);">
+              <span>🧾 Statutory GST Tax Invoice (Passenger Transport by Air - SAC 9964)</span>
+              <span id="confInvoiceNo">INV-2026-AIRX-9821</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:11.5px;">
+              <div>
+                Airline GSTIN: <b style="color:var(--text-main);" id="confAirlineGstin">07AAACI1111A1Z1</b><br>
+                Recipient: <span id="confRecipient">Rajesh Sharma</span>
+              </div>
+              <div style="text-align:right;">
+                Taxable Value: <b id="confTaxableVal">₹4,570</b><br>
+                GST (CGST 2.5% + SGST 2.5%): <b id="confGstVal">₹228</b><br>
+                Total Paid: <b style="color:var(--brand-cyan);" id="confTotalPaid">₹4,914</b>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:20px;">
+        <button class="btn primary" onclick="window.print()" style="display:flex; align-items:center; gap:8px;">
+          <span>🖨️</span> <span>Print E-Ticket & Boarding Pass</span>
+        </button>
+        <button class="btn light" onclick="downloadInvoiceSummary()" style="display:flex; align-items:center; gap:8px;">
+          <span>📄</span> <span>Download GST Invoice (PDF/JSON)</span>
+        </button>
+        <button class="btn light" onclick="window.location.href='/'" style="display:flex; align-items:center; gap:8px;">
+          <span>🔍</span> <span>Book Another Flight / Search</span>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Notification Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="/js/api.js"></script>
+  <script src="/js/booking.js"></script>
+</body>
+</html>
