@@ -37,31 +37,38 @@ def build_timeline(stage: int, cancel_date: str, credit_date: str):
     return [
         {
             "step": 1,
-            "title": "Ticket Cancellation Initiated",
-            "desc": f"Cancelled online via airline portal on {cancel_date}",
+            "title": "Refund Requested",
+            "desc": f"Cancellation request submitted on {cancel_date}",
             "completed": stage >= 1,
             "current": stage == 1
         },
         {
             "step": 2,
-            "title": "Airline Audit & Approval",
-            "desc": "DGCA cancellation fee verified, airline approved refund",
+            "title": "Under Review",
+            "desc": "Airline verifying flight details under DGCA statutory guidelines",
             "completed": stage >= 2,
             "current": stage == 2
         },
         {
             "step": 3,
-            "title": "Banking Gateway Processing",
-            "desc": "Acquirer banking gateway processing transfer to original payment method",
+            "title": "Refund Approved",
+            "desc": "Statutory refund amount approved by carrier",
             "completed": stage >= 3,
             "current": stage == 3
         },
         {
             "step": 4,
-            "title": "Amount Credited to Account",
-            "desc": f"Funds successfully credited. Expected completion: {credit_date}",
+            "title": "Refund Processing",
+            "desc": "Banking payment switch processing transfer to original payment method",
             "completed": stage >= 4,
             "current": stage == 4
+        },
+        {
+            "step": 5,
+            "title": "Refund Credited",
+            "desc": f"Funds credited to bank account / UPI VPA. Completed: {credit_date}",
+            "completed": stage >= 5,
+            "current": stage == 5
         }
     ]
 
@@ -95,31 +102,9 @@ def track_refund(pnr: str):
         d["timeline"] = build_timeline(d["stage"], d["cancellation_date"], d["expected_credit_date"])
         return RefundItem(**d)
     else:
-        # Provide real-time dynamic simulation for any user-entered domestic PNR
-        now = datetime.now()
-        cancel_date = (now - timedelta(days=2)).strftime("%Y-%m-%d")
-        credit_date = (now + timedelta(days=3)).strftime("%Y-%m-%d")
-        total_fare = 5400
-        cancellation_fee = 999
-        refund_amount = total_fare - cancellation_fee
-
-        return RefundItem(
-            id=999,
-            pnr=clean_pnr,
-            passenger_name="Verified Passenger",
-            airline="IndiGo",
-            flight_no="6E 203",
-            sector="HYD ➔ DEL",
-            total_fare=total_fare,
-            cancellation_fee=cancellation_fee,
-            refund_amount=refund_amount,
-            payment_method="UPI / Original Payment Card",
-            arn_number=f"ARN{clean_pnr}894012",
-            status="Processing",
-            stage=3,
-            cancellation_date=cancel_date,
-            expected_credit_date=credit_date,
-            timeline=build_timeline(3, cancel_date, credit_date)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No active refund record found for PNR '{clean_pnr}'. If you recently cancelled your flight, please submit a claim below."
         )
 
 @router.post("/claim", response_model=RefundItem, status_code=status.HTTP_201_CREATED)

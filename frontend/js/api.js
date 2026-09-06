@@ -19,11 +19,16 @@ class AirfarexAPI {
         ...options
       });
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => null);
+        const msg = errorData?.detail || errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        const err = new Error(msg);
+        err.status = response.status;
+        err.data = errorData;
+        throw err;
       }
       return await response.json();
     } catch (err) {
-      console.warn(`[API] Request to ${endpoint} failed:`, err);
+      console.warn(`[API] Request to ${endpoint} failed:`, err.message || err);
       throw err;
     }
   }
@@ -208,16 +213,46 @@ class AirfarexAPI {
     });
   }
 
-  // Supabase Cloud Database Connector
+  // Supabase Cloud Database Connector (Read-only status)
   async getSupabaseStatus() {
     return this._fetch('/api/v1/supabase/status');
   }
 
-  async updateSupabaseConfig(key, url = null) {
-    return this._fetch('/api/v1/supabase/config', {
+  // Authoritative Server-Side Price Calculation
+  async calculatePaymentPrice(payload) {
+    return this._fetch('/api/v1/payments/calculate-price', {
       method: 'POST',
-      body: JSON.stringify({ supabase_key: key, supabase_url: url })
+      body: JSON.stringify(payload)
     });
+  }
+
+  // Payment State Machine: Order Creation
+  async createPaymentOrder(payload) {
+    return this._fetch('/api/v1/payments/create-order', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // Payment State Machine: Signature Verification
+  async verifyPayment(payload) {
+    return this._fetch('/api/v1/payments/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // Sandbox Mode Authorize / Decline Simulator
+  async sandboxAuthorize(payload) {
+    return this._fetch('/api/v1/payments/sandbox-authorize', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // Real-time Payment & Booking Order Status
+  async getPaymentStatus(orderId) {
+    return this._fetch(`/api/v1/payments/status/${encodeURIComponent(orderId)}`);
   }
 }
 

@@ -17,43 +17,49 @@
     <div class="mesh-orb orb-3"></div>
   </div>
 
-  <!-- System Live Status Banner -->
-  <div class="sys-banner">
-    <div>
-      <span class="live-badge" data-i18n="sys_banner_active">AGENTIC AI & TOURIST PACKAGES ACTIVE</span>
-      <strong data-i18n="sys_banner_desc">AirfareX Production Prototype: High-frequency Indian flight quotes, instant multi-airline comparison, monthly low fares, promo discounts, and side-by-side tourist packages.</strong>
+  <!-- Customer Trust & Protection Banner -->
+  <div class="sys-banner" id="customerTrustBanner">
+    <div class="sys-banner-left">
+      <span class="live-badge">VERIFIED TRAVEL PORTAL</span>
+      <span>🔒 100% Secure UPI & Card Payments</span>
+      <span class="banner-sep">·</span>
+      <span>🏛️ DGCA Statutory Refund Guarantee</span>
+      <span class="banner-sep">·</span>
+      <span>⚡ Zero Convenience Fee on UPI</span>
+      <span class="banner-sep">·</span>
+      <span>✈️ 1M+ Domestic Fares Analyzed</span>
     </div>
-    <div style="display:flex; gap:12px; align-items:center;">
-      <button onclick="openSupabaseModal()" class="btn sm" style="padding:2px 10px; font-size:11px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:var(--brand-mint); display:inline-flex; align-items:center; gap:5px; border-radius:12px; cursor:pointer;">
-        <span>⚡</span> <b>Supabase DB</b>
+    <div class="sys-banner-right">
+      <span style="color:var(--text-muted); font-size:11.5px; display:inline-flex; align-items:center; gap:5px;">
+        <span>📞</span> 24x7 Traveler Support
+      </span>
+      <button class="admin-portal-link" onclick="showTab('admin', document.querySelector('.main-nav a[data-tab=\'admin\']'))" title="Open Engineering, Economic Analytics & API Console">
+        <span>⚙️ Admin & Analytics Portal ↗</span>
       </button>
-      <a href="/docs" target="_blank" style="color:var(--brand-blue); font-weight:700; text-decoration:none; font-size:11.5px;" data-i18n="sys_swagger_link">Swagger API Docs ↗</a>
     </div>
-
   </div>
 
-  <!-- Main Navigation Header -->
+  <!-- Main Customer Navigation Header -->
   <header class="header-top">
     <div class="brand-wrapper" onclick="showTab('home', document.querySelector('.main-nav a[data-tab=\'home\']'))">
       <div class="brand-logo-icon">✈</div>
       <div>
-        <div class="brand-text" data-i18n="brand_title">Airfare<span>X</span> India</div>
-        <span class="brand-sub" data-i18n="brand_subtitle">Aviation Intelligence & Tourist Packages</span>
+        <div class="brand-text">Airfare<span>X</span> India</div>
+        <span class="brand-sub">Travel Smarter · Pay Less</span>
       </div>
     </div>
 
     <nav class="main-nav">
-      <a class="nav-link active" data-tab="home" onclick="showTab('home', this)" data-i18n="nav_overview">Overview</a>
-      <a class="nav-link" data-tab="tourist-plans" onclick="showTab('tourist-plans', this)">🌴 Tourist Packages</a>
-      <a class="nav-link" data-tab="explorer" onclick="showTab('explorer', this)" data-i18n="nav_explorer">Flight Explorer</a>
+      <a class="nav-link active" data-tab="home" onclick="showTab('home', this)">✈️ Flights</a>
+      <a class="nav-link" data-tab="tourist-plans" onclick="showTab('tourist-plans', this)">🌴 Packages</a>
+      <a class="nav-link" data-tab="explorer" onclick="showTab('explorer', this)">🔍 Flight Explorer</a>
       <a class="nav-link" data-tab="comparison" onclick="showTab('comparison', this)">⚖️ Compare Airlines</a>
-      <a class="nav-link" data-tab="monthly-fares" onclick="showTab('monthly-fares', this)">📅 Monthly Low Fares</a>
-      <a class="nav-link" data-tab="offers" onclick="showTab('offers', this)">🏷️ Offers & Discounts</a>
-      <a class="nav-link" data-tab="prediction" onclick="showTab('prediction', this)" data-i18n="nav_prediction">🔮 Price Predictor</a>
-      <a class="nav-link" data-tab="refunds" onclick="showTab('refunds', this)" data-i18n="nav_refunds">💳 Refund Tracker</a>
-      <a class="nav-link" data-tab="routes" onclick="showTab('routes', this)" data-i18n="nav_routes">Route Intelligence</a>
-      <a class="nav-link" data-tab="index" onclick="showTab('index', this)" data-i18n="nav_index">APIx Index</a>
-      <a class="nav-link" data-tab="saved" onclick="showTab('saved', this)" data-i18n="nav_saved">Saved & Alerts</a>
+      <a class="nav-link" data-tab="monthly-fares" onclick="showTab('monthly-fares', this)">📅 Low Fares</a>
+      <a class="nav-link" data-tab="offers" onclick="showTab('offers', this)">🏷️ Deals</a>
+      <a class="nav-link" data-tab="prediction" onclick="showTab('prediction', this)">🔮 Forecast</a>
+      <a class="nav-link" data-tab="refunds" onclick="showTab('refunds', this)">💳 Refund Tracker</a>
+      <a class="nav-link" data-tab="saved" onclick="showTab('saved', this)">🔔 My Trips</a>
+      <a class="nav-link nav-admin-link" data-tab="admin" onclick="showTab('admin', this)">⚙️ Admin & Analytics</a>
     </nav>
 
     <div class="top-actions">
@@ -75,8 +81,9 @@
         <option value="light">☁️ Frosted Alabaster</option>
       </select>
 
-      <button class="btn light sm" onclick="openModal('cpiModal')" data-i18n="nav_cpi">🧪 CPI Lab</button>
-      <button class="btn sm" onclick="openModal('apiModal')" data-i18n="nav_api">🔌 API</button>
+      <button class="btn sm light" onclick="showToast('Welcome back, Deepak! Your travel profile is active.')" title="Customer Profile" style="display:inline-flex; align-items:center; gap:6px;">
+        <span>👤</span> <span>Account</span>
+      </button>
     </div>
   </header>
 
@@ -87,81 +94,173 @@
          SECTION 1: OVERVIEW & INSTANT COMPARISON
          ========================================================= -->
     <section id="home">
-      <!-- Hero Banner with AI-Generated Aviation Visual -->
+      <!-- Hero Banner with Human-First Travel Search -->
       <div class="hero-wrapper">
         <img src="/assets/images/hero_aviation.jpg" alt="Commercial jetliner ascending above Indian metropolis" class="hero-backdrop-img">
         <div class="hero-overlay"></div>
         <div class="hero-content">
           <div class="hero-top-badges">
-            <span class="hero-pill" data-i18n="hero_badge">🇮🇳 INDIAN DOMESTIC AIRFARE INTELLIGENCE</span>
-            <span class="hero-pill green">● TOURIST PACKAGES & INSTANT COMPARISON</span>
+            <span class="hero-pill green">● AI TRAVEL ASSISTANT & BEST VALUE GUARANTEE</span>
+            <span class="hero-pill">🇮🇳 ALL INDIAN DOMESTIC AIRLINES INCLUDED</span>
           </div>
-          <h1>Search flights. Compare instantly. Complete tourist plans.</h1>
-          <p>AirfareX delivers real-time Indian domestic flight benchmark pricing, instant cross-airline side-by-side comparison, monthly low fare calendars, and end-to-end tourist packages with flight tickets, 4-star hotels, and day-by-day itineraries with verified discount offers.</p>
+          <h1>Travel smarter. Pay less.</h1>
+          <p class="hero-subtext">AI-powered flights, stays and travel packages — personalized for your trip.</p>
 
-          <!-- Glassmorphic Search Bar -->
-          <div class="search-bar">
-            <div class="field">
-              <label data-i18n="from_label">FROM</label>
-              <input id="fromCity" list="originAirports" value="Hyderabad (HYD)" oninput="handleHomePlaceChange()" onchange="handleHomePlaceChange()">
-              <datalist id="originAirports">
-                <option value="Hyderabad (HYD)">
-                <option value="Delhi (DEL)">
-                <option value="Mumbai (BOM)">
-                <option value="Bengaluru (BLR)">
-                <option value="Chennai (MAA)">
-                <option value="Kolkata (CCU)">
-                <option value="Goa (GOI)">
-                <option value="Pune (PNQ)">
-                <option value="Jaipur (JAI)">
-              </datalist>
+          <!-- Human-First Travel Booking Card -->
+          <div class="search-card-container">
+            <!-- Trip Type Selector -->
+            <div class="trip-type-bar">
+              <button type="button" class="trip-tab active" id="tabOneWay" onclick="setTripType('oneway')">One Way</button>
+              <button type="button" class="trip-tab" id="tabRoundTrip" onclick="setTripType('roundtrip')">Round Trip</button>
+              <button type="button" class="trip-tab" onclick="showTab('tourist-plans', document.querySelector('.main-nav a[data-tab=\'tourist-plans\']'))">🌴 Holiday Packages</button>
             </div>
 
-            <div class="field">
-              <label data-i18n="to_label">TO</label>
-              <input id="toCity" list="destAirports" value="Delhi (DEL)" oninput="handleHomePlaceChange()" onchange="handleHomePlaceChange()">
-              <datalist id="destAirports">
-                <option value="Delhi (DEL)">
-                <option value="Mumbai (BOM)">
-                <option value="Bengaluru (BLR)">
-                <option value="Hyderabad (HYD)">
-                <option value="Chennai (MAA)">
-                <option value="Kolkata (CCU)">
-                <option value="Goa (GOI)">
-                <option value="Pune (PNQ)">
-                <option value="Jaipur (JAI)">
-              </datalist>
+            <!-- Glassmorphic Search Fields Grid -->
+            <div class="search-bar">
+              <div class="field">
+                <label data-i18n="from_label">FROM (ORIGIN)</label>
+                <input id="fromCity" list="originAirports" value="Hyderabad (HYD)" oninput="handleHomePlaceChange()" onchange="handleHomePlaceChange()" placeholder="City or airport">
+                <datalist id="originAirports">
+                  <option value="Hyderabad (HYD)">
+                  <option value="Delhi (DEL)">
+                  <option value="Mumbai (BOM)">
+                  <option value="Bengaluru (BLR)">
+                  <option value="Chennai (MAA)">
+                  <option value="Kolkata (CCU)">
+                  <option value="Goa (GOI)">
+                  <option value="Pune (PNQ)">
+                  <option value="Jaipur (JAI)">
+                </datalist>
+              </div>
+
+              <!-- Swap Airports Button -->
+              <button type="button" class="airport-swap-btn" onclick="swapOriginDest()" title="Swap Cities">⇄</button>
+
+              <div class="field">
+                <label data-i18n="to_label">TO (DESTINATION)</label>
+                <input id="toCity" list="destAirports" value="Delhi (DEL)" oninput="handleHomePlaceChange()" onchange="handleHomePlaceChange()" placeholder="City or airport">
+                <datalist id="destAirports">
+                  <option value="Delhi (DEL)">
+                  <option value="Mumbai (BOM)">
+                  <option value="Bengaluru (BLR)">
+                  <option value="Hyderabad (HYD)">
+                  <option value="Chennai (MAA)">
+                  <option value="Kolkata (CCU)">
+                  <option value="Goa (GOI)">
+                  <option value="Pune (PNQ)">
+                  <option value="Jaipur (JAI)">
+                </datalist>
+              </div>
+
+              <div class="field">
+                <label data-i18n="depart_label">DEPARTURE DATE</label>
+                <input type="date" id="departDate">
+              </div>
+
+              <div class="field" id="returnDateFieldWrap" style="opacity: 0.5;">
+                <label>RETURN DATE</label>
+                <input type="date" id="returnDate" placeholder="Add Return" onchange="enableRoundTrip()">
+              </div>
+
+              <div class="field">
+                <label data-i18n="travellers_label">TRAVELERS & CABIN</label>
+                <select id="cabinSelect">
+                  <option data-i18n="cabin_1_eco">1 Adult · Economy</option>
+                  <option data-i18n="cabin_2_eco">2 Adults · Economy</option>
+                  <option data-i18n="cabin_1_prem">1 Adult · Premium Economy</option>
+                  <option data-i18n="cabin_1_biz">1 Adult · Business Class</option>
+                </select>
+              </div>
+
+              <div class="search-actions-col">
+                <button class="btn green search-cta-btn" onclick="triggerSearch()" data-i18n="search_btn">
+                  <span>🔍</span> <span>Search Flights</span>
+                </button>
+              </div>
             </div>
 
-            <div class="field">
-              <label data-i18n="depart_label">DEPART</label>
-              <input type="date" id="departDate">
+            <!-- Customer Trust Signals Strip -->
+            <div class="trust-signals-bar">
+              <div class="trust-signal-item">
+                <span class="trust-icon">🔒</span>
+                <span><b>100% Secure Payments</b> (UPI, Cards & Net Banking)</span>
+              </div>
+              <div class="trust-signal-item">
+                <span class="trust-icon">✓</span>
+                <span><b>Transparent Pricing</b> — Zero Hidden Fees</span>
+              </div>
+              <div class="trust-signal-item">
+                <span class="trust-icon">🏛️</span>
+                <span><b>DGCA Statutory Protection</b> (24h Free Cancellation)</span>
+              </div>
+              <div class="trust-signal-item">
+                <span class="trust-icon">🤖</span>
+                <span><b>AI Best-Value Engine</b> (Save up to ₹2,500)</span>
+              </div>
             </div>
-
-            <div class="field">
-              <label data-i18n="travellers_label">TRAVELLERS / CABIN</label>
-              <select id="cabinSelect">
-                <option data-i18n="cabin_1_eco">1 Adult · Economy</option>
-                <option data-i18n="cabin_2_eco">2 Adults · Economy</option>
-                <option data-i18n="cabin_1_prem">1 Adult · Premium Economy</option>
-                <option data-i18n="cabin_1_biz">1 Adult · Business</option>
-              </select>
-            </div>
-
-            <button class="btn green" onclick="triggerSearch()" data-i18n="search_btn">Search Flights</button>
           </div>
 
-          <!-- Quick Chips -->
+          <!-- Quick Filters Chips -->
           <div class="chips-bar">
-            <button class="chip" onclick="showTab('tourist-plans', document.querySelector('.main-nav a[data-tab=\'tourist-plans\']'))">🌴 Tourist Packages</button>
+            <button class="chip" onclick="showTab('tourist-plans', document.querySelector('.main-nav a[data-tab=\'tourist-plans\']'))">🌴 Curated Packages</button>
             <button class="chip" onclick="flexDates()" data-i18n="chip_flex">📅 Flexible dates</button>
             <button class="chip" onclick="everywhere()" data-i18n="chip_everywhere">🌍 Explore everywhere</button>
-            <button class="chip" onclick="nearbyAirports()" data-i18n="chip_nearby">📍 Nearby airports</button>
+            <button class="chip" onclick="showTab('monthly-fares', document.querySelector('.main-nav a[data-tab=\'monthly-fares\']'))">📅 Monthly lowest fares</button>
             <button class="chip" onclick="showTab('saved', document.querySelector('.main-nav a[data-tab=\'saved\']'))" data-i18n="chip_alerts">🔔 Price alerts</button>
-            <button class="chip" onclick="showTab('comparison', document.querySelector('.main-nav a[data-tab=\'comparison\']'))">✈️ Compare flights</button>
+            <button class="chip" onclick="showTab('comparison', document.querySelector('.main-nav a[data-tab=\'comparison\']'))">✈️ Compare airlines</button>
           </div>
 
           <div id="searchResultBox" class="search-status-box hidden"></div>
+        </div>
+      </div>
+
+      <!-- AirfareX AI Recommendation & Travel Assistant Pick (Issue #3 & #7) -->
+      <div class="ai-recommendation-hero-card" id="aiHeroPickCard">
+        <div class="ai-pick-header">
+          <div class="ai-pick-tag">
+            <span class="ai-robot-badge">🤖</span>
+            <div>
+              <span class="ai-pick-label">AirfareX AI Recommends</span>
+              <h3 class="ai-pick-title" id="aiPickFlightTitle">IndiGo 6E 2341 · 06:30 DEL ➔ 09:10 BLR</h3>
+            </div>
+          </div>
+          <div class="ai-pick-price-box">
+            <span class="ai-pick-fare-label">Authoritative Fare</span>
+            <span class="ai-pick-fare" id="aiPickFare">₹5,240</span>
+            <span class="ai-pick-tagline">Statutory Taxes & Cabin Bag Included</span>
+          </div>
+        </div>
+
+        <div class="ai-reasons-grid">
+          <div class="ai-reason-item">
+            <span class="check-icon">✓</span>
+            <div><b>₹1,840 cheaper</b> than 7-day average route fare</div>
+          </div>
+          <div class="ai-reason-item">
+            <span class="check-icon">✓</span>
+            <div><b>Non-stop direct</b> flight (2h 40m total duration)</div>
+          </div>
+          <div class="ai-reason-item">
+            <span class="check-icon">✓</span>
+            <div><b>Optimal morning</b> departure slot</div>
+          </div>
+          <div class="ai-reason-item">
+            <span class="check-icon">✓</span>
+            <div><b>94% on-time</b> historical DGCA performance</div>
+          </div>
+        </div>
+
+        <div class="ai-pick-footer">
+          <div class="ai-comparison-pills">
+            <span style="font-size:12px; color:var(--text-muted); font-weight:700;">Compare options:</span>
+            <button type="button" class="ai-compare-chip active" onclick="filterByAiCategory('all', this)">👑 Best Overall</button>
+            <button type="button" class="ai-compare-chip" onclick="filterByAiCategory('cheapest', this)">💰 Lowest Fare</button>
+            <button type="button" class="ai-compare-chip" onclick="filterByAiCategory('fastest', this)">⚡ Fastest Non-Stop</button>
+            <button type="button" class="ai-compare-chip" onclick="filterByAiCategory('family', this)">👨‍👩‍👧 Best for Families</button>
+          </div>
+          <button type="button" class="btn green" onclick="selectFlight('IndiGo', '6E-2341', 5240, 'BLR', 'Bengaluru')" style="display:inline-flex; align-items:center; gap:8px; font-weight:800; padding:10px 22px; font-size:13.5px;">
+            <span>Choose AI Pick</span> <span>➔</span>
+          </button>
         </div>
       </div>
 
@@ -275,27 +374,31 @@
         </div>
       </div>
 
-      <!-- National KPI Grid -->
-      <div class="grid-4">
-        <div class="card kpi-card">
-          <div class="metric-title"><span data-i18n="kpi_apix">National APIx</span> <span class="badge blue">2024=100</span></div>
-          <div class="metric" id="kpiApix">128.6</div>
-          <div class="metric-sub good" data-i18n="kpi_apix_sub">▲ 2.8% this month</div>
+      <!-- Customer Travel Highlights & Value Guarantees (Issue #5) -->
+      <div class="grid-4 customer-kpi-grid">
+        <div class="card travel-stat-card">
+          <div class="travel-stat-icon">✈️</div>
+          <div class="metric-title">1M+ Fares Analyzed</div>
+          <div class="metric">Live Benchmarks</div>
+          <div class="metric-sub good">Comparing 6 domestic carriers in real-time</div>
         </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="kpi_avg_fare">Average Domestic Fare</div>
-          <div class="metric" id="kpiAvgFare">₹5,842</div>
-          <div class="metric-sub" data-i18n="kpi_avg_fare_sub">Across top 24 metro sectors</div>
+        <div class="card travel-stat-card">
+          <div class="travel-stat-icon">🏷️</div>
+          <div class="metric-title">Guaranteed Savings</div>
+          <div class="metric">Save up to ₹2,500</div>
+          <div class="metric-sub good">Verified promo coupons & holiday bundling</div>
         </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="kpi_quotes">Quotes Processed</div>
-          <div class="metric" id="kpiQuotes">1.24M</div>
-          <div class="metric-sub" data-i18n="kpi_quotes_sub">Rolling observation basket</div>
+        <div class="card travel-stat-card">
+          <div class="travel-stat-icon">⚡</div>
+          <div class="metric-title">Zero Fee on UPI</div>
+          <div class="metric">Save ₹350</div>
+          <div class="metric-sub good">Zero payment gateway surcharge on any UPI app</div>
         </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="kpi_confidence">Data Confidence</div>
-          <div class="metric" id="kpiConfidence">94.2%</div>
-          <div class="metric-sub good" data-i18n="kpi_confidence_sub">Multi-source verified</div>
+        <div class="card travel-stat-card">
+          <div class="travel-stat-icon">🛡️</div>
+          <div class="metric-title">DGCA Passenger Rights</div>
+          <div class="metric">100% Protected</div>
+          <div class="metric-sub good">Full statutory refunds & delay compensation</div>
         </div>
       </div>
     </section>
@@ -564,152 +667,182 @@
     </section>
 
     <!-- =========================================================
-         SECTION: ROUTE INTELLIGENCE
+         SECTION: ENGINEERING & MACRO ANALYTICS PORTAL (ADMIN)
          ========================================================= -->
-    <section id="routes" class="hidden">
-      <div class="section-head">
+    <section id="admin" class="hidden">
+      <div class="section-head admin-portal-head">
         <div>
-          <h1 data-i18n="routes_title">Route Intelligence & Network</h1>
-          <p class="metric-sub" data-i18n="routes_subtitle">City-pair prices, inflation indices and booking-window behaviour across India.</p>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <span class="badge blue">ADMIN & RESEARCH PORTAL</span>
+            <span class="live-badge">TELEMETRY ACTIVE</span>
+          </div>
+          <h1>⚙️ Aviation Analytics, Network Topology & Research API</h1>
+          <p class="metric-sub">Dedicated analytical environment for central bank economists, DGCA researchers, revenue management teams, and infrastructure engineers.</p>
         </div>
-        <button class="btn light sm" onclick="exportRouteData()" data-i18n="btn_export_csv">📥 Export CSV</button>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn sm light" onclick="openModal('cpiModal')">🧪 CPI Augmentation Lab</button>
+          <button type="button" class="btn sm light" onclick="openModal('apiModal')">🔌 API Research Console</button>
+          <a href="/docs" target="_blank" class="btn sm" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+            <span>Swagger API Docs</span> <span>↗</span>
+          </a>
+        </div>
       </div>
 
-      <div class="grid-2">
-        <div class="card">
-          <h2 data-i18n="heatmap_title">India Airfare Route Heatmap</h2>
-          <p class="metric-sub" style="margin-bottom:12px;" data-i18n="heatmap_subtitle">Interactive network topology showing monitored metro sectors and inflation hotspots.</p>
-          <div id="routeNetworkMap" class="map-canvas-box"></div>
+      <!-- Admin Sub-Navigation Switcher -->
+      <div class="admin-subnav-bar">
+        <button type="button" class="admin-subtab-btn active" id="adminBtnRoutes" onclick="switchAdminPortalTab('routes', this)">
+          <span>🗺️</span> <span>Route Intelligence & Heatmap</span>
+        </button>
+        <button type="button" class="admin-subtab-btn" id="adminBtnIndex" onclick="switchAdminPortalTab('index', this)">
+          <span>📊</span> <span>APIx Index Engine</span>
+        </button>
+        <button type="button" class="admin-subtab-btn" id="adminBtnQuality" onclick="switchAdminPortalTab('quality', this)">
+          <span>🔍</span> <span>Data Quality & Audit Center</span>
+        </button>
+      </div>
+
+      <!-- SUB-SECTION 1: ROUTE INTELLIGENCE -->
+      <div id="routes" class="admin-subview">
+        <div class="section-head" style="margin-top:16px;">
+          <div>
+            <h2 data-i18n="routes_title">Route Intelligence & Network Topology</h2>
+            <p class="metric-sub" data-i18n="routes_subtitle">City-pair prices, inflation indices and booking-window behaviour across India.</p>
+          </div>
+          <button class="btn light sm" onclick="exportRouteData()" data-i18n="btn_export_csv">📥 Export CSV</button>
         </div>
 
-        <div class="card">
-          <h2 data-i18n="elasticity_title">Lead-Time Elasticity Curve</h2>
-          <p class="metric-sub" style="margin-bottom:14px;" data-i18n="elasticity_subtitle">Observe how advance booking window affects domestic flight pricing.</p>
-          <div id="elasticityCurveBox">
-            <div class="empty-box">Select a route or view baseline...</div>
+        <div class="grid-2">
+          <div class="card">
+            <h2 data-i18n="heatmap_title">India Airfare Route Heatmap</h2>
+            <p class="metric-sub" style="margin-bottom:12px;" data-i18n="heatmap_subtitle">Interactive network topology showing monitored metro sectors and inflation hotspots.</p>
+            <div id="routeNetworkMap" class="map-canvas-box"></div>
+          </div>
+
+          <div class="card">
+            <h2 data-i18n="elasticity_title">Lead-Time Elasticity Curve</h2>
+            <p class="metric-sub" style="margin-bottom:14px;" data-i18n="elasticity_subtitle">Observe how advance booking window affects domestic flight pricing.</p>
+            <div id="elasticityCurveBox">
+              <div class="empty-box">Select a route or view baseline...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section">
+          <h2 data-i18n="sectors_title">Monitored Indian Domestic Sectors</h2>
+          <div class="data-table-wrap" style="margin-top:14px;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th><span data-i18n="th_route">Route</span></th>
+                  <th><span data-i18n="th_apix">APIx Index</span></th>
+                  <th><span data-i18n="th_change30d">30D Change</span></th>
+                  <th><span data-i18n="th_avg_fare">Avg Fare</span></th>
+                  <th><span data-i18n="th_volatility">Volatility</span></th>
+                  <th><span data-i18n="th_status">Status</span></th>
+                  <th><span data-i18n="th_action">Action</span></th>
+                </tr>
+              </thead>
+              <tbody id="routesTableBody"></tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <div class="card section">
-        <h2 data-i18n="sectors_title">Monitored Indian Domestic Sectors</h2>
-        <div class="data-table-wrap" style="margin-top:14px;">
-          <table class="table">
+      <!-- SUB-SECTION 2: APIx INDEX ENGINE -->
+      <div id="index" class="admin-subview hidden">
+        <div class="section-head" style="margin-top:16px;">
+          <div>
+            <h2 data-i18n="index_title">APIx Index Construction Engine</h2>
+            <p class="metric-sub" data-i18n="index_subtitle">Transparent aggregation methodology, statistical normalization, and advance baskets.</p>
+          </div>
+          <span class="badge green" data-i18n="index_base_badge">Base Period 2024 = 100</span>
+        </div>
+
+        <div class="grid-4">
+          <div class="card kpi-card">
+            <div class="metric-title" data-i18n="idx_daily">Daily APIx</div>
+            <div class="metric">128.6</div>
+            <div class="metric-sub good">+0.8% today</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title" data-i18n="idx_weekly">Weekly APIx</div>
+            <div class="metric">126.9</div>
+            <div class="metric-sub good">+2.1%</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title" data-i18n="idx_monthly">Monthly APIx</div>
+            <div class="metric">121.4</div>
+            <div class="metric-sub good">+7.4%</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title" data-i18n="idx_coverage">Index Coverage</div>
+            <div class="metric">94.8%</div>
+            <div class="metric-sub">Representative sample</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h2 data-i18n="pipeline_title">Index Pipeline Status</h2>
+            <div class="route-row"><span data-i18n="pipe_stage1">1. Collect raw airline quotes</span><span class="badge green" data-i18n="pipe_complete">Complete</span></div>
+            <div class="route-row"><span data-i18n="pipe_stage2">2. Deduplicate & filter anomalies</span><span class="badge green" data-i18n="pipe_complete">Complete</span></div>
+            <div class="route-row"><span data-i18n="pipe_stage3">3. Normalize taxes, UDF & bag fees</span><span class="badge green" data-i18n="pipe_complete">Complete</span></div>
+            <div class="route-row"><span data-i18n="pipe_stage4">4. Apply DGCA passenger traffic weights</span><span class="badge green" data-i18n="pipe_complete">Complete</span></div>
+            <div class="route-row"><span data-i18n="pipe_stage5">5. Compute composite daily APIx</span><span class="badge green" data-i18n="pipe_live">Live Engine</span></div>
+          </div>
+
+          <div class="card">
+            <h2 data-i18n="basket_title">Advance Booking Basket</h2>
+            <div id="advanceBasketContainer"></div>
+          </div>
+        </div>
+
+        <div class="card section">
+          <h2 data-i18n="fare_decomp_title">Domestic Fare Decomposition Breakdown</h2>
+          <table class="table" style="margin-top:12px;">
             <thead>
               <tr>
-                <th><span data-i18n="th_route">Route</span></th>
-                <th><span data-i18n="th_apix">APIx Index</span></th>
-                <th><span data-i18n="th_change30d">30D Change</span></th>
-                <th><span data-i18n="th_avg_fare">Avg Fare</span></th>
-                <th><span data-i18n="th_volatility">Volatility</span></th>
-                <th><span data-i18n="th_status">Status</span></th>
-                <th><span data-i18n="th_action">Action</span></th>
+                <th><span data-i18n="th_fare_comp">Fare Component</span></th>
+                <th><span data-i18n="th_avg_share">Average Share</span></th>
+                <th><span data-i18n="th_rep_cost">Representative Cost (₹6,300 Ticket)</span></th>
               </tr>
             </thead>
-            <tbody id="routesTableBody"></tbody>
+            <tbody id="fareDecompositionBody"></tbody>
           </table>
         </div>
       </div>
-    </section>
 
-    <!-- =========================================================
-         SECTION: APIx INDEX ENGINE
-         ========================================================= -->
-    <section id="index" class="hidden">
-      <div class="section-head">
-        <div>
-          <h1 data-i18n="index_title">APIx Index Construction Engine</h1>
-          <p class="metric-sub" data-i18n="index_subtitle">Transparent aggregation methodology, statistical normalization, and advance baskets.</p>
-        </div>
-        <span class="badge green" data-i18n="index_base_badge">Base Period 2024 = 100</span>
-      </div>
-
-      <div class="grid-4">
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="idx_daily">Daily APIx</div>
-          <div class="metric">128.6</div>
-          <div class="metric-sub good">+0.8% today</div>
-        </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="idx_weekly">Weekly APIx</div>
-          <div class="metric">126.9</div>
-          <div class="metric-sub good">+2.1%</div>
-        </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="idx_monthly">Monthly APIx</div>
-          <div class="metric">121.4</div>
-          <div class="metric-sub good">+7.4%</div>
-        </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="idx_coverage">Index Coverage</div>
-          <div class="metric">94.8%</div>
-          <div class="metric-sub">Representative sample</div>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="card">
-          <h2 data-i18n="pipeline_title">Index Pipeline Status</h2>
-          <div class="route-row"><span data-i18n="pipe_stage1">1. Collect raw airline quotes</span><span class="badge green" data-i18n="pipe_complete">Complete</span></div>
-          <div class="route-row"><span data-i18n="pipe_stage2">2. Deduplicate & filter anomalies</span><span class="badge green" data-i18n="pipe_complete">Complete</span></div>
-          <div class="route-row"><span data-i18n="pipe_stage3">3. Normalize taxes, UDF & bag fees</span><span class="badge green" data-i18n="pipe_complete">Complete</span></div>
-          <div class="route-row"><span data-i18n="pipe_stage4">4. Apply DGCA passenger traffic weights</span><span class="badge green" data-i18n="pipe_complete">Complete</span></div>
-          <div class="route-row"><span data-i18n="pipe_stage5">5. Compute composite daily APIx</span><span class="badge green" data-i18n="pipe_live">Live Engine</span></div>
+      <!-- SUB-SECTION 3: DATA QUALITY CENTER -->
+      <div id="quality" class="admin-subview hidden">
+        <div class="section-head" style="margin-top:16px;">
+          <div>
+            <h2 data-i18n="dq_title">Data Quality & Audit Center</h2>
+            <p class="metric-sub" data-i18n="dq_subtitle">Reliability metrics, outlier screening, and DGCA backtesting verification.</p>
+          </div>
+          <span class="badge green" data-i18n="dq_healthy">System Healthy</span>
         </div>
 
-        <div class="card">
-          <h2 data-i18n="basket_title">Advance Booking Basket</h2>
-          <div id="advanceBasketContainer"></div>
-        </div>
-      </div>
-
-      <div class="card section">
-        <h2 data-i18n="fare_decomp_title">Domestic Fare Decomposition Breakdown</h2>
-        <table class="table" style="margin-top:12px;">
-          <thead>
-            <tr>
-              <th><span data-i18n="th_fare_comp">Fare Component</span></th>
-              <th><span data-i18n="th_avg_share">Average Share</span></th>
-              <th><span data-i18n="th_rep_cost">Representative Cost (₹6,300 Ticket)</span></th>
-            </tr>
-          </thead>
-          <tbody id="fareDecompositionBody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- =========================================================
-         SECTION: DATA QUALITY CENTER
-         ========================================================= -->
-    <section id="quality" class="hidden">
-      <div class="section-head">
-        <div>
-          <h1 data-i18n="dq_title">Data Quality & Audit Center</h1>
-          <p class="metric-sub" data-i18n="dq_subtitle">Reliability metrics, outlier screening, and DGCA backtesting verification.</p>
-        </div>
-        <span class="badge green" data-i18n="dq_healthy">System Healthy</span>
-      </div>
-
-      <div class="grid-4">
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="dq_quotes">Quotes Collected</div>
-          <div class="metric" id="qQuotes">125,420</div>
-          <div class="metric-sub" data-i18n="dq_quotes_sub">24-hour observation</div>
-        </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="dq_valid">Valid Clean Quotes</div>
-          <div class="metric" id="qValid">117,842</div>
-          <div class="metric-sub good" data-i18n="dq_valid_sub">94% validation rate</div>
-        </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="dq_dups">Duplicates Removed</div>
-          <div class="metric" id="qDups">4,120</div>
-          <div class="metric-sub" data-i18n="dq_dups_sub">Cached re-queries</div>
-        </div>
-        <div class="card kpi-card">
-          <div class="metric-title" data-i18n="dq_outliers">Outliers Screened</div>
-          <div class="metric" id="qOutliers">1,613</div>
-          <div class="metric-sub" data-i18n="dq_outliers_sub">IQR anomaly detection</div>
+        <div class="grid-4">
+          <div class="card kpi-card">
+            <div class="metric-title" data-i18n="dq_quotes">Quotes Collected</div>
+            <div class="metric" id="qQuotes">125,420</div>
+            <div class="metric-sub" data-i18n="dq_quotes_sub">24-hour observation</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title" data-i18n="dq_valid">Valid Clean Quotes</div>
+            <div class="metric" id="qValid">117,842</div>
+            <div class="metric-sub good" data-i18n="dq_valid_sub">94% validation rate</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title" data-i18n="dq_dups">Duplicates Removed</div>
+            <div class="metric" id="qDups">4,120</div>
+            <div class="metric-sub" data-i18n="dq_dups_sub">Cached re-queries</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title" data-i18n="dq_outliers">Outliers Screened</div>
+            <div class="metric" id="qOutliers">1,613</div>
+            <div class="metric-sub" data-i18n="dq_outliers_sub">IQR anomaly detection</div>
+          </div>
         </div>
       </div>
     </section>
@@ -1171,95 +1304,375 @@
   </div>
 
   <!-- =========================================================
+       MODAL 4.5: TOURIST PACKAGE DETAILS & ITINERARY (Issue #9)
+       ========================================================= -->
+  <div class="modal-backdrop" id="packageDetailsModal">
+    <div class="modal-window" style="max-width:740px; padding:0; overflow:hidden;">
+      <!-- Hero Media Banner -->
+      <div style="position:relative; height:240px; overflow:hidden;">
+        <img id="pkgDetailImg" src="/assets/images/hero_aviation.jpg" alt="Package destination" style="width:100%; height:100%; object-fit:cover;">
+        <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(6,11,24,0.95) 0%, rgba(6,11,24,0.3) 60%, transparent 100%);"></div>
+        <button class="modal-close-btn" onclick="closeModal('packageDetailsModal')" style="top:14px; right:14px; background:rgba(0,0,0,0.6); z-index:10;">✕</button>
+        
+        <div style="position:absolute; bottom:16px; left:20px; right:20px; z-index:5;">
+          <div style="display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
+            <span class="badge green" id="pkgDetailDuration">4 Nights / 5 Days</span>
+            <span class="badge blue" id="pkgDetailDest">Goa</span>
+            <span class="badge" style="background:rgba(245,158,11,0.25); color:#f59e0b; border:1px solid rgba(245,158,11,0.4);">★ 4.8 / 5.0 (240+ Verified Travelers)</span>
+          </div>
+          <h2 id="pkgDetailTitle" style="margin:0 0 4px; font-size:22px; color:#ffffff;">Goa Beachfront Escape & Heritage Walk</h2>
+          <p id="pkgDetailTagline" style="margin:0; font-size:13px; color:#cbd5e1;">Curated luxury retreat with direct beach access, sightseeing tours & return flights.</p>
+        </div>
+      </div>
+
+      <div style="padding:20px 24px; max-height:calc(85vh - 300px); overflow-y:auto;">
+        <!-- Inclusions Quick Strip -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:20px;">
+          <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:20px; margin-bottom:4px;">✈️</div>
+            <b style="font-size:12px; display:block; color:var(--text-main);">Return Flights</b>
+            <span id="pkgDetailCarrier" style="font-size:11px; color:var(--text-muted);">IndiGo / Air India</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:20px; margin-bottom:4px;">🏨</div>
+            <b style="font-size:12px; display:block; color:var(--text-main);">4-Star Hotel</b>
+            <span id="pkgDetailHotel" style="font-size:11px; color:var(--text-muted);">Deluxe Room + Breakfast</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:20px; margin-bottom:4px;">🚕</div>
+            <b style="font-size:12px; display:block; color:var(--text-main);">Private Transfers</b>
+            <span style="font-size:11px; color:var(--text-muted);">Airport Pick & Drop</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:20px; margin-bottom:4px;">🤖</div>
+            <b style="font-size:12px; display:block; color:var(--brand-mint);">AI Itinerary</b>
+            <span style="font-size:11px; color:var(--text-muted);">Optimized Timing</span>
+          </div>
+        </div>
+
+        <!-- Day by Day Itinerary -->
+        <div style="margin-bottom:20px;">
+          <h3 style="font-size:15px; margin-bottom:12px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+            <span>🗺️</span> <span>Day-by-Day Sightseeing Itinerary</span>
+          </h3>
+          <div id="pkgDetailItineraryList" style="display:flex; flex-direction:column; gap:10px;">
+            <!-- Populated dynamically by JS -->
+          </div>
+        </div>
+
+        <!-- Inclusions vs Exclusions -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+          <div style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:14px;">
+            <b style="color:var(--brand-mint); font-size:12px; display:block; margin-bottom:8px;">✓ WHAT'S INCLUDED:</b>
+            <ul style="margin:0; padding-left:18px; font-size:11.5px; color:var(--text-muted); line-height:1.6;">
+              <li>Return economy flight tickets (15kg check-in + 7kg cabin bag)</li>
+              <li>4-star AC accommodation with complimentary daily buffet breakfast</li>
+              <li>Private airport transfers in sanitized air-conditioned vehicle</li>
+              <li>All statutory airport UDF, ASF, and 5% GST taxes included</li>
+            </ul>
+          </div>
+          <div style="background:rgba(244,63,94,0.05); border:1px solid rgba(244,63,94,0.2); border-radius:8px; padding:14px;">
+            <b style="color:var(--brand-rose); font-size:12px; display:block; margin-bottom:8px;">✕ WHAT'S NOT INCLUDED:</b>
+            <ul style="margin:0; padding-left:18px; font-size:11.5px; color:var(--text-muted); line-height:1.6;">
+              <li>Personal expenses (room service, laundry, telephone calls)</li>
+              <li>Optional water sports and monument camera entrance fees</li>
+              <li>Early check-in or late check-out beyond hotel standard policy</li>
+              <li>Travel insurance (available as optional add-on during checkout)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky Modal Footer -->
+      <div style="background:var(--bg-surface); border-top:1px solid var(--border-color); padding:14px 24px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <span style="font-size:11px; color:var(--text-muted); display:block;">Starting from (All-inclusive per person):</span>
+          <div style="display:flex; align-items:baseline; gap:8px;">
+            <span id="pkgDetailOfferPrice" style="font-size:22px; font-weight:900; color:var(--brand-mint);">₹18,499</span>
+            <span id="pkgDetailRegularPrice" style="font-size:13px; color:var(--text-muted); text-decoration:line-through;">₹22,999</span>
+            <span id="pkgDetailSavingsPill" class="badge green" style="font-size:10px;">Save ₹4,500</span>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn light" onclick="closeModal('packageDetailsModal')">Close</button>
+          <button type="button" class="btn green" id="btnBookFromDetails" onclick="bookCurrentDetailPackage()" style="display:inline-flex; align-items:center; gap:8px; font-weight:800;">
+            <span>Book this Package</span> <span>➔</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
        MODAL 5: BOOK TOURIST PACKAGE
        ========================================================= -->
   <div class="modal-backdrop" id="bookPackageModal">
-    <div class="modal-window" style="max-width:580px;">
+    <div class="modal-window" style="max-width:620px;">
       <button class="modal-close-btn" onclick="closeModal('bookPackageModal')">✕</button>
-      <h2>Confirm Tourist Package Booking</h2>
-      <p class="metric-sub" style="margin-bottom:16px;">Flight Ticket + Hotel + Itinerary bundled with instant offer savings.</p>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+        <span style="font-size:22px;">🏖️</span>
+        <h2 style="margin:0;">Book Tourist Package</h2>
+      </div>
+      <p class="metric-sub" style="margin-bottom:16px;">Verified flight tickets + 4/5-star hotel + private transfers with zero-trust payment security.</p>
 
       <div id="packageBookingDetails" style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:16px; margin-bottom:16px;">
         <!-- Filled dynamically -->
       </div>
 
-      <div class="field" style="margin-bottom:12px;">
-        <label>PRIMARY TRAVELER FULL NAME</label>
-        <input id="pkgTravelerName" placeholder="Full name as on Aadhaar/Passport" value="Deepak Gowtam">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div class="field">
+          <label>PRIMARY TRAVELER FULL NAME *</label>
+          <input id="pkgTravelerName" placeholder="Full name as on Aadhaar/Passport" value="Deepak Gowtam">
+        </div>
+        <div class="field">
+          <label>NUMBER OF TRAVELERS (PAX)</label>
+          <select id="pkgPaxCount" onchange="onPackagePaxOrPromoChanged()" style="width:100%; padding:9px 12px; background:rgba(255,255,255,0.04); border:1px solid var(--border-color); border-radius:var(--radius-sm); color:var(--text-main);">
+            <option value="1">1 Adult Passenger</option>
+            <option value="2">2 Adults (Couple / Twin Share)</option>
+            <option value="3">3 Adults (Family)</option>
+            <option value="4">4 Adults (Group)</option>
+            <option value="5">5 Adults (Group)</option>
+            <option value="6">6 Adults (Group)</option>
+          </select>
+        </div>
       </div>
-      <div class="field" style="margin-bottom:12px;">
-        <label>CONTACT EMAIL & PHONE</label>
-        <input id="pkgTravelerContact" placeholder="email@example.com / +91 9876543210" value="deepak@example.com | +91 98765 43210">
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div class="field">
+          <label>CONTACT EMAIL *</label>
+          <input type="email" id="pkgTravelerEmail" placeholder="deepak@example.com" value="deepak@example.com">
+        </div>
+        <div class="field">
+          <label>MOBILE NUMBER (SMS & TICKET) *</label>
+          <input type="tel" id="pkgTravelerPhone" placeholder="+91 9876543210" value="+91 9876543210">
+        </div>
       </div>
-      <div class="field" style="margin-bottom:16px;">
-        <label>TRAVEL DATE</label>
-        <input type="date" id="pkgTravelDate">
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+        <div class="field">
+          <label>TRAVEL DATE *</label>
+          <input type="date" id="pkgTravelDate">
+        </div>
+        <div class="field">
+          <label>PROMO COUPON CODE</label>
+          <div style="display:flex; gap:6px;">
+            <input id="pkgPromoInput" placeholder="e.g. AIRX500" value="AIRX500" style="text-transform:uppercase;">
+            <button class="btn light sm" type="button" onclick="onPackagePaxOrPromoChanged()">Apply</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Itemized Price Breakdown -->
+      <div id="pkgItemizedBox" style="background:rgba(14,165,233,0.04); border:1px solid rgba(14,165,233,0.2); border-radius:var(--radius-sm); padding:14px; margin-bottom:16px; font-size:12.5px;">
+        <div style="font-weight:700; color:var(--brand-cyan); margin-bottom:8px; text-transform:uppercase; font-size:11px; letter-spacing:0.5px;">Authoritative Server Price Breakdown</div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span style="color:var(--text-muted);">Base Package Rate (Flights + Hotel):</span>
+          <span id="pkgBreakdownBase" style="font-weight:600;">₹0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span style="color:var(--text-muted);">Package Offer Savings:</span>
+          <span id="pkgBreakdownOffer" style="color:var(--brand-mint); font-weight:600;">-₹0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;" id="pkgBreakdownPromoRow">
+          <span style="color:var(--text-muted);">Coupon Discount:</span>
+          <span id="pkgBreakdownPromo" style="color:var(--brand-mint); font-weight:600;">-₹0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span style="color:var(--text-muted);">Statutory Taxes (GST & DGCA Levies):</span>
+          <span id="pkgBreakdownTaxes" style="color:var(--text-muted);">Included</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:6px;">
+          <span style="font-weight:700; color:var(--text-main);">Verified Net Payable:</span>
+          <span id="pkgPayableAmount" style="font-size:20px; font-weight:900; color:var(--brand-mint);">₹0</span>
+        </div>
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:14px;">
-        <div>
-          <span style="font-size:11px; color:var(--text-muted); display:block;">PAYABLE WITH OFFER:</span>
-          <span id="pkgPayableAmount" style="font-size:22px; font-weight:900; color:var(--brand-mint);">₹0</span>
+        <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+          <span>🛡️</span>
+          <span>Payment verified before booking confirmation</span>
         </div>
         <div style="display:flex; gap:10px;">
-          <button class="btn light" onclick="closeModal('bookPackageModal')">Cancel</button>
-          <button class="btn green" onclick="confirmPackageBooking()">Confirm & Issue Tickets</button>
+          <button class="btn light" type="button" onclick="closeModal('bookPackageModal')">Cancel</button>
+          <button class="btn green" type="button" id="btnProceedPackagePayment" onclick="initiatePackagePayment()" style="display:inline-flex; align-items:center; gap:6px;">
+            <span>🔒</span> <span id="btnProceedText">Proceed to Payment</span>
+          </button>
         </div>
       </div>
     </div>
-  <!-- Supabase Cloud Database Connection Modal -->
-  <div class="modal-backdrop" id="supabaseModal">
-    <div class="modal-content" style="max-width:580px;">
-      <div class="modal-header">
+  </div>
+
+  <!-- =========================================================
+       MODAL 6: CRYPTOGRAPHIC SANDBOX TEST GATEWAY
+       ========================================================= -->
+  <div class="modal-backdrop" id="sandboxPaymentModal">
+    <div class="modal-window" style="max-width:520px; border-color:rgba(14,165,233,0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
         <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:22px;">⚡</span>
+          <span style="font-size:22px;">🔒</span>
           <div>
-            <h3 style="margin:0; font-size:17px; color:var(--text-main);">Supabase Cloud Database</h3>
-            <span style="font-size:11.5px; color:var(--brand-mint);">Project: thtwkhhccxmkkgwtoleb</span>
+            <h3 style="margin:0; font-size:16px;">AirfareX Payment Gateway</h3>
+            <span style="font-size:11px; color:var(--brand-cyan); font-weight:700;">SANDBOX SIMULATION · 256-BIT HMAC-SHA256</span>
           </div>
         </div>
-        <button class="modal-close" onclick="closeModal('supabaseModal')">✕</button>
+        <button class="modal-close-btn" onclick="executeSandboxPayment('DECLINE')">✕</button>
       </div>
-      <div class="modal-body">
-        <!-- Live Connection Status Banner -->
-        <div id="supaStatusBox" style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:12px; font-weight:700; color:var(--text-muted);">STATUS</span>
-            <span id="supaStatusBadge" class="badge amber">Checking...</span>
-          </div>
-          <div id="supaStatusMsg" style="font-size:12.5px; color:var(--text-main); margin-top:8px;">
-            Testing connection to https://thtwkhhccxmkkgwtoleb.supabase.co...
-          </div>
-        </div>
 
-        <!-- Project URL Display -->
-        <div style="margin-bottom:14px;">
-          <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Supabase Project Endpoint</label>
-          <input type="text" id="supaUrlInput" value="https://thtwkhhccxmkkgwtoleb.supabase.co" readonly style="width:100%; padding:9px 12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:var(--brand-cyan); font-family:'JetBrains Mono',monospace; font-size:12.5px;">
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:14px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;">
+          <span style="color:var(--text-muted);">Gateway Order ID:</span>
+          <span id="sbxOrderId" style="font-family:'JetBrains Mono',monospace; color:var(--brand-cyan); font-weight:700;">-</span>
         </div>
-
-        <!-- Supabase API Key Input -->
-        <div style="margin-bottom:16px;">
-          <label style="display:block; font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Supabase API Key (Anon Public or Service Key) *</label>
-          <input type="password" id="supaKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." style="width:100%; padding:10px 12px; border-radius:var(--radius-md); border:1px solid var(--border-color); background:rgba(255,255,255,0.04); color:var(--text-main); font-family:inherit; font-size:13px;">
-          <div style="font-size:11px; color:var(--text-muted); margin-top:6px; line-height:1.4;">
-            ℹ Find your key in: <b>Supabase Dashboard ➔ Settings ➔ API ➔ Project API keys</b>.
-          </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;">
+          <span style="color:var(--text-muted);">Beneficiary Merchant:</span>
+          <span style="font-weight:600;">AirfareX India Aviation Ltd</span>
         </div>
-
-        <!-- SQL Schema Instructions -->
-        <div style="background:rgba(14,165,233,0.06); border:1px solid rgba(14,165,233,0.25); border-radius:var(--radius-md); padding:12px 14px; font-size:12px; color:var(--text-main); line-height:1.4; margin-bottom:16px;">
-          <b>🛠️ Database Schema:</b> Run the provided <code>supabase_schema.sql</code> in your Supabase <b>SQL Editor</b> to initialize flights, routes, alerts, bookings, and refunds tables.
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;">
+          <span style="color:var(--text-muted);">Traveler / Customer:</span>
+          <span id="sbxTraveler" style="font-weight:600;">-</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:8px;">
+          <span style="font-weight:700; color:var(--text-main);">Amount to Authorize:</span>
+          <span id="sbxAmount" style="font-size:22px; font-weight:900; color:var(--brand-mint);">₹0</span>
         </div>
       </div>
-      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
-        <a href="/supabase_schema.sql" download class="btn sm light" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-          <span>📄</span> <span>Download Schema SQL</span>
-        </a>
-        <div style="display:flex; gap:10px;">
-          <button class="btn light sm" onclick="checkSupabaseConnectionLive()">Refresh Status</button>
-          <button class="btn green sm" onclick="saveSupabaseKey()">Save & Authenticate</button>
+
+      <!-- Test payment method choices -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11.5px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">TEST PAYMENT INSTRUMENT</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <button type="button" class="btn light sm" style="text-align:left; border-color:var(--brand-cyan); background:rgba(14,165,233,0.1);">
+            <div style="font-weight:700; font-size:12px; color:var(--brand-cyan);">📱 UPI / Google Pay</div>
+            <div style="font-size:10px; color:var(--text-muted);">Auto-verified NPCI Switch</div>
+          </button>
+          <button type="button" class="btn light sm" style="text-align:left;">
+            <div style="font-weight:700; font-size:12px;">💳 Test Rupay / Visa Card</div>
+            <div style="font-size:10px; color:var(--text-muted);">3D Secure OTP Bypass</div>
+          </button>
         </div>
+      </div>
+
+      <!-- Live processing indicator -->
+      <div id="sbxProcessing" style="display:none; text-align:center; padding:12px 0;">
+        <div class="loader-spinner" style="margin:0 auto 8px; width:28px; height:28px; border:3px solid rgba(14,165,233,0.2); border-top-color:var(--brand-cyan); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+        <div style="font-size:12px; font-weight:700; color:var(--text-main);" id="sbxProcessText">Contacting Banking Switch & Validating HMAC Signature...</div>
+      </div>
+
+      <div id="sbxActionButtons" style="display:flex; flex-direction:column; gap:10px;">
+        <button type="button" class="btn green" id="sbxBtnAuthorize" onclick="executeSandboxPayment('AUTHORIZE')" style="width:100%; justify-content:center; padding:12px; font-weight:800;">
+          <span>✓</span> Complete & Authorize Payment
+        </button>
+        <button type="button" class="btn light" id="sbxBtnDecline" onclick="executeSandboxPayment('DECLINE')" style="width:100%; justify-content:center; color:var(--brand-rose); border-color:rgba(244,63,94,0.3); font-size:12px;">
+          <span>✕</span> Simulate Bank Authorization Failure / Decline
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL 7: CONFIRMED TOURIST PACKAGE VOUCHER & TICKETS
+       ========================================================= -->
+  <div class="modal-backdrop" id="packageConfirmedModal">
+    <div class="modal-window" style="max-width:620px; border-color:rgba(16,185,129,0.4);">
+      <button class="modal-close-btn" onclick="closeModal('packageConfirmedModal')">✕</button>
+      <div style="text-align:center; margin-bottom:16px;">
+        <div style="display:inline-flex; width:54px; height:54px; border-radius:50%; background:rgba(16,185,129,0.15); border:2px solid var(--brand-mint); align-items:center; justify-content:center; font-size:26px; color:var(--brand-mint); margin-bottom:8px;">✓</div>
+        <h2 style="margin:0 0 4px; color:var(--brand-mint);">Payment Verified & Booking Confirmed!</h2>
+        <p class="metric-sub" style="margin:0;">DGCA-registered flight tickets and 4/5-star hotel accommodation vouchers issued.</p>
+      </div>
+
+      <!-- Voucher Card -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+          <div>
+            <div style="font-size:11px; text-transform:uppercase; color:var(--brand-mint); font-weight:800;">OFFICIAL BOOKING PNR</div>
+            <div id="pkgConfPnr" style="font-size:24px; font-weight:900; font-family:'JetBrains Mono',monospace; color:#ffffff;">PKG-AIRX1000</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">HOTEL VOUCHER REF</div>
+            <div id="pkgConfHotelVoucher" style="font-size:16px; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--brand-cyan);">HTL-84920</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12.5px; margin-bottom:10px;">
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">HOLIDAY PACKAGE:</span>
+            <strong id="pkgConfTitle" style="color:var(--text-main);">-</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">PRIMARY TRAVELER:</span>
+            <strong id="pkgConfTraveler" style="color:var(--text-main);">-</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">TRAVEL DATE & PAX:</span>
+            <strong id="pkgConfDatePax" style="color:var(--text-main);">-</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">ALLOCATED SEATS:</span>
+            <strong id="pkgConfSeat" style="color:var(--brand-mint);">Confirmed (Cabin 12A/B)</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">PAYMENT TRANSACTION:</span>
+            <strong id="pkgConfPayId" style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--brand-cyan);">-</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted); display:block; font-size:11px;">TOTAL AMOUNT PAID:</span>
+            <strong id="pkgConfAmount" style="color:var(--brand-mint); font-size:14px;">₹0</strong>
+          </div>
+        </div>
+
+        <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.2); border-radius:6px; padding:8px 12px; font-size:11px; color:var(--brand-mint); display:flex; align-items:center; gap:8px;">
+          <span>✓</span>
+          <span>DGCA Verified & GST Invoice generated. Confirmed vouchers sent to your registered email & phone.</span>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn light" onclick="window.print()"><span>🖨️</span> Print Voucher</button>
+        <button class="btn green" onclick="closeModal('packageConfirmedModal')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL 8: PACKAGE PAYMENT FAILED / INCOMPLETE
+       ========================================================= -->
+  <div class="modal-backdrop" id="packageFailedModal">
+    <div class="modal-window" style="max-width:520px; border-color:rgba(244,63,94,0.4);">
+      <button class="modal-close-btn" onclick="closeModal('packageFailedModal')">✕</button>
+      <div style="text-align:center; margin-bottom:16px;">
+        <div style="display:inline-flex; width:54px; height:54px; border-radius:50%; background:rgba(244,63,94,0.15); border:2px solid var(--brand-rose); align-items:center; justify-content:center; font-size:26px; color:var(--brand-rose); margin-bottom:8px;">✕</div>
+        <h2 style="margin:0 0 4px; color:var(--brand-rose);">Payment Failed — Booking Incomplete</h2>
+        <p class="metric-sub" style="margin:0;">No fare was charged and no seats or hotel rooms have been reserved.</p>
+      </div>
+
+      <!-- Warning Alert -->
+      <div style="background:rgba(244,63,94,0.08); border:1px solid rgba(244,63,94,0.3); border-radius:var(--radius-sm); padding:12px 14px; font-size:12px; color:#fca5a5; margin-bottom:16px; display:flex; align-items:flex-start; gap:10px;">
+        <span style="font-size:16px;">⚠️</span>
+        <div>
+          <b>SEATS & HOTEL NOT BOOKED:</b>
+          <div>Payment authorization was not verified by the banking switch. As a security measure, our system does not issue unverified tickets.</div>
+        </div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:12px; margin-bottom:16px; font-size:12px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:var(--text-muted);">Order ID:</span>
+          <span id="pkgFailOrderId" style="font-family:'JetBrains Mono',monospace; color:var(--brand-cyan);">-</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span style="color:var(--text-muted);">Amount Attempted:</span>
+          <span id="pkgFailAmount" style="color:var(--brand-rose); font-weight:700;">-</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:var(--text-muted);">Decline Reason:</span>
+          <span id="pkgFailReason" style="color:#fca5a5; text-align:right; max-width:260px;">Bank authorization declined</span>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn light" onclick="closeModal('packageFailedModal')">Close</button>
+        <button class="btn primary" onclick="closeModal('packageFailedModal'); openPackageBookingModal(state.selectedPackage?.id);"><span>🔄</span> Retry Booking</button>
       </div>
     </div>
   </div>

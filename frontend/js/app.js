@@ -223,35 +223,192 @@ function searchDestination(code, fullName) {
   loadFlights();
 }
 
-// Navigation between views
+// Admin Portal Subtab Switcher
+function switchAdminPortalTab(subId, btn) {
+  const subtabs = ['routes', 'index', 'quality'];
+  subtabs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', id !== subId);
+  });
+  document.querySelectorAll('.admin-subtab-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  if (subId === 'routes') loadRoutes();
+  if (subId === 'index') loadIndexData();
+  if (subId === 'quality') loadQualityData();
+}
+
+// Navigation between customer & admin views
 function showTab(tabId, el) {
-  const sections = ['home', 'explorer', 'comparison', 'monthly-fares', 'offers', 'tourist-plans', 'prediction', 'refunds', 'routes', 'index', 'quality', 'saved'];
+  let targetTab = tabId;
+  let adminSubtab = null;
+  if (['routes', 'index', 'quality'].includes(tabId)) {
+    targetTab = 'admin';
+    adminSubtab = tabId;
+  }
+
+  const sections = ['home', 'explorer', 'comparison', 'monthly-fares', 'offers', 'tourist-plans', 'prediction', 'refunds', 'admin', 'saved'];
   sections.forEach(id => {
     const sec = document.getElementById(id);
-    if (sec) sec.classList.toggle('hidden', id !== tabId);
+    if (sec) sec.classList.toggle('hidden', id !== targetTab);
   });
 
   document.querySelectorAll('.main-nav .nav-link').forEach(link => {
     link.classList.remove('active');
   });
-  if (el) el.classList.add('active');
+  const activeNav = el || document.querySelector(`.main-nav a[data-tab="${targetTab}"]`);
+  if (activeNav) activeNav.classList.add('active');
 
-  state.currentTab = tabId;
+  state.currentTab = targetTab;
+
+  // Handle Admin portal subtab
+  if (targetTab === 'admin') {
+    const sub = adminSubtab || 'routes';
+    const subBtn = document.getElementById(`adminBtn${sub.charAt(0).toUpperCase() + sub.slice(1)}`);
+    switchAdminPortalTab(sub, subBtn);
+  }
 
   // Trigger contextual data loads
-  if (tabId === 'explorer') loadFlights();
-  if (tabId === 'comparison') loadSectorComparison();
-  if (tabId === 'monthly-fares') loadMonthlyCalendar();
-  if (tabId === 'offers') loadOffers();
-  if (tabId === 'tourist-plans') loadTouristPlans();
-  if (tabId === 'prediction') runPricePrediction();
-  if (tabId === 'refunds') trackRefundStatus('AIRX789');
-  if (tabId === 'routes') loadRoutes();
-  if (tabId === 'index') loadIndexData();
-  if (tabId === 'quality') loadQualityData();
-  if (tabId === 'saved') loadAlerts();
+  if (targetTab === 'explorer') loadFlights();
+  if (targetTab === 'comparison') loadSectorComparison();
+  if (targetTab === 'monthly-fares') loadMonthlyCalendar();
+  if (targetTab === 'offers') loadOffers();
+  if (targetTab === 'tourist-plans') loadTouristPlans();
+  if (targetTab === 'prediction') runPricePrediction();
+  if (targetTab === 'refunds') trackRefundStatus('AIRX789');
+  if (targetTab === 'saved') loadAlerts();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Customer Trip Type Selector
+let currentTripType = 'oneway';
+function setTripType(type) {
+  currentTripType = type;
+  const tabOneWay = document.getElementById('tabOneWay');
+  const tabRoundTrip = document.getElementById('tabRoundTrip');
+  const returnWrap = document.getElementById('returnDateFieldWrap');
+  const returnDate = document.getElementById('returnDate');
+
+  if (type === 'roundtrip') {
+    if (tabOneWay) tabOneWay.classList.remove('active');
+    if (tabRoundTrip) tabRoundTrip.classList.add('active');
+    if (returnWrap) returnWrap.style.opacity = '1';
+    if (returnDate && !returnDate.value) {
+      const depVal = document.getElementById('departDate')?.value;
+      const baseDate = depVal ? new Date(depVal) : new Date();
+      returnDate.value = new Date(baseDate.getTime() + 86400000 * 4).toISOString().slice(0, 10);
+    }
+    showToast('Round Trip selected. Return date added.');
+  } else {
+    if (tabOneWay) tabOneWay.classList.add('active');
+    if (tabRoundTrip) tabRoundTrip.classList.remove('active');
+    if (returnWrap) returnWrap.style.opacity = '0.5';
+    showToast('One Way flight selected.');
+  }
+}
+
+function enableRoundTrip() {
+  setTripType('roundtrip');
+}
+
+// Airport Origin / Destination Swap
+function swapOriginDest() {
+  const from = document.getElementById('fromCity');
+  const to = document.getElementById('toCity');
+  if (from && to) {
+    const tmp = from.value;
+    from.value = to.value;
+    to.value = tmp;
+    handleHomePlaceChange();
+    showToast(`Swapped: Flying ${from.value} ➔ ${to.value}`);
+  }
+}
+
+// AI Recommendation Category Filter & Recommendations (Issue #3 & #7)
+const aiRecommendationsData = {
+  all: {
+    airline: 'IndiGo',
+    flight_no: '6E-2341',
+    fare: 5240,
+    destCode: 'BLR',
+    destCity: 'Bengaluru',
+    title: 'IndiGo 6E 2341 · 06:30 DEL ➔ 09:10 BLR',
+    reasons: [
+      '<b>₹1,840 cheaper</b> than 7-day average route fare',
+      '<b>Non-stop direct</b> flight (2h 40m total duration)',
+      '<b>Optimal morning</b> departure slot',
+      '<b>94% on-time</b> historical DGCA performance'
+    ]
+  },
+  cheapest: {
+    airline: 'Akasa Air',
+    flight_no: 'QP-1382',
+    fare: 4390,
+    destCode: 'BLR',
+    destCity: 'Bengaluru',
+    title: 'Akasa Air QP 1382 · 11:45 DEL ➔ 14:30 BLR',
+    reasons: [
+      '<b>₹2,690 cheaper</b> — lowest fare observed this week',
+      '<b>Non-stop direct</b> flight (2h 45m)',
+      '<b>USB charging & extra legroom</b> at every seat',
+      '<b>Zero change fees</b> if booked 7+ days in advance'
+    ]
+  },
+  fastest: {
+    airline: 'Air India',
+    flight_no: 'AI-804',
+    fare: 5850,
+    destCode: 'BLR',
+    destCity: 'Bengaluru',
+    title: 'Air India AI 804 · 18:15 DEL ➔ 20:45 BLR',
+    reasons: [
+      '<b>Fastest sector time</b> (2h 30m non-stop direct)',
+      '<b>Terminal 3 departure</b> with DigiYatra express lanes',
+      '<b>Complimentary hot meal & beverages</b> included',
+      '<b>25kg checked baggage</b> allowance included'
+    ]
+  },
+  family: {
+    airline: 'Air India Express',
+    flight_no: 'IX-1422',
+    fare: 4980,
+    destCode: 'BLR',
+    destCity: 'Bengaluru',
+    title: 'AI Express IX 1422 · 08:30 DEL ➔ 11:20 BLR',
+    reasons: [
+      '<b>Best family departure time</b> (no late-night arrival)',
+      '<b>Adjacent family seats</b> auto-allocated with zero fee',
+      '<b>Warm snack box</b> included for all passengers',
+      '<b>20kg baggage</b> allowance for easier packing'
+    ]
+  }
+};
+
+function filterByAiCategory(cat, btn) {
+  document.querySelectorAll('.ai-compare-chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const rec = aiRecommendationsData[cat] || aiRecommendationsData.all;
+  const titleEl = document.getElementById('aiPickFlightTitle');
+  const fareEl = document.getElementById('aiPickFare');
+  const reasonsEl = document.querySelector('.ai-reasons-grid');
+
+  if (titleEl) titleEl.textContent = rec.title;
+  if (fareEl) fareEl.textContent = `₹${rec.fare.toLocaleString('en-IN')}`;
+  if (reasonsEl && rec.reasons) {
+    reasonsEl.innerHTML = rec.reasons.map(r => `
+      <div class="ai-reason-item">
+        <span class="check-icon">✓</span>
+        <div>${r}</div>
+      </div>
+    `).join('');
+  }
+
+  const ctaBtn = document.querySelector('#aiHeroPickCard button.btn.green');
+  if (ctaBtn) {
+    ctaBtn.onclick = () => selectFlight(rec.airline, rec.flight_no, rec.fare, rec.destCode, rec.destCity);
+  }
 }
 
 // Initial Data Bootstrapper
@@ -398,9 +555,10 @@ function renderFlightCards(flights, bestFare) {
 
   if (!flights || !flights.length) {
     container.innerHTML = `
-      <div class="card empty-box" style="margin-top:14px;">
-        <h3>No flights match your filter criteria</h3>
-        <p style="margin-top:6px; font-size:13px;">Try widening your price range, choosing "Any" stops, or selecting "All airlines".</p>
+      <div class="card empty-box" style="margin-top:14px; text-align:center; padding:36px 20px;">
+        <span style="font-size:32px; display:block; margin-bottom:8px;">🔍</span>
+        <h3 style="margin-bottom:6px;">We couldn't find flights matching those filters</h3>
+        <p style="font-size:13px; color:var(--text-muted);">Try selecting "Any" stops, broadening your price limit, or clearing filters.</p>
       </div>
     `;
     return;
@@ -410,22 +568,29 @@ function renderFlightCards(flights, bestFare) {
 
   container.innerHTML = flights.map(f => {
     const finalFare = withBag ? (f.total_fare + f.bag_fee) : f.total_fare;
-    const isBest = bestFare && f.total_fare === bestFare;
     const airlineClass = `airline-${f.airline.toLowerCase().replace(/\s+/g, '-')}`;
 
+    // Customer-friendly smart badges (Issue #6)
+    let badgeText = '🏷️ BEST VALUE';
+    let badgeColor = 'blue';
+
+    if (f.fare_score >= 93 || f.tag?.includes('Recommended') || f.flight_no === '6E-205') {
+      badgeText = '🤖 AI PICK';
+      badgeColor = 'green';
+    } else if (bestFare && f.total_fare <= bestFare) {
+      badgeText = '💰 CHEAPEST';
+      badgeColor = 'green';
+    } else if (f.stops === 'Nonstop' && (f.duration?.startsWith('2h') || f.duration?.startsWith('1h'))) {
+      badgeText = '⚡ FASTEST';
+      badgeColor = 'cyan';
+    }
+
     const bagSubText = withBag 
-      ? window.i18n?.t('card_incl_bag', 'incl. 15kg checked bag') 
-      : window.i18n?.t('card_base_taxes', 'base fare + taxes');
-    const selectBtnText = 'Select Fare ✈';
-    const trackBtnText = window.i18n?.t('card_track', '🔔 Track');
-    const liveStatusText = window.i18n?.t('card_live_status', 'Live Status →');
-    const termText = window.i18n?.t('card_terminal', 'Terminal');
-    const gateText = window.i18n?.t('card_gate', 'Gate');
-    const scoreText = window.i18n?.t('card_score', 'Score');
+      ? 'incl. 15kg checked bag' 
+      : 'Taxes & fees included';
     const bagTagText = f.bag_fee === 0 
-      ? window.i18n?.t('card_bag_incl', '✓ 1 checked bag included') 
-      : (window.i18n?.t('card_bag_extra', 'Checked bag: +₹') + f.bag_fee);
-    const taxesTagText = window.i18n?.t('card_taxes_incl', 'Taxes included');
+      ? '🧳 7kg Cabin + 15kg Checked bag included' 
+      : `🧳 Checked bag: +₹${f.bag_fee}`;
 
     return `
       <div class="flight-card ${airlineClass}">
@@ -436,7 +601,7 @@ function renderFlightCards(flights, bestFare) {
               <span class="flight-no-tag">${f.flight_no}</span>
             </div>
             <div>
-              <span class="badge ${isBest ? 'green' : 'blue'}">${f.tag || 'Standard Fare'}</span>
+              <span class="badge ${badgeColor}">${badgeText}</span>
             </div>
           </div>
 
@@ -458,7 +623,7 @@ function renderFlightCards(flights, bestFare) {
 
           <div class="flight-intelligence-box">
             <div class="score-badge-wrap">
-              <span class="small" style="font-size:11px; color:var(--text-muted); font-weight:700;">${scoreText}</span>
+              <span class="small" style="font-size:11px; color:var(--text-muted); font-weight:700;">Value Score</span>
               <span class="score-value">${f.fare_score}/100</span>
             </div>
             <div class="co2-pill">
@@ -472,17 +637,17 @@ function renderFlightCards(flights, bestFare) {
           </div>
 
           <div class="flight-actions">
-            <button class="btn sm" onclick="selectFlight('${f.airline}', '${f.flight_no}', ${finalFare}, '${f.destination_code}', '${f.destination}')">${selectBtnText}</button>
-            <button class="btn sm light" onclick="quickAlert('${f.origin_code} → ${f.destination_code}', ${finalFare})">${trackBtnText}</button>
+            <button class="btn sm" onclick="selectFlight('${f.airline}', '${f.flight_no}', ${finalFare}, '${f.destination_code}', '${f.destination}')">Select Flight ➔</button>
+            <button class="btn sm light" onclick="quickAlert('${f.origin_code} → ${f.destination_code}', ${finalFare})">🔔 Track</button>
           </div>
         </div>
 
         <div class="flight-tags-row">
-          <span class="flight-pill-tag">${termText} ${f.terminal || 'T2'}</span>
-          <span class="flight-pill-tag">${gateText} ${f.gate || 'G1'}</span>
+          <span class="flight-pill-tag">📍 Terminal ${f.terminal || 'T2'}</span>
           <span class="flight-pill-tag">${bagTagText}</span>
-          <span class="flight-pill-tag">${taxesTagText}</span>
-          <span class="flight-pill-tag accent clickable" onclick="checkStatusForFlight('${f.flight_no}')">${liveStatusText}</span>
+          <span class="flight-pill-tag">✓ Refundable (DGCA Rules)</span>
+          <span class="flight-pill-tag">💺 ${f.seat_pitch || '30"'} Seat Pitch</span>
+          <span class="flight-pill-tag accent clickable" onclick="checkStatusForFlight('${f.flight_no}')">Live Status →</span>
         </div>
       </div>
     `;
@@ -1628,15 +1793,75 @@ function renderTouristCards(plans) {
           </div>
         </div>
 
-        <!-- Book Complete Package Button -->
-        <div style="padding: 0 18px 18px;">
-          <button class="tourist-book-btn" onclick="openPackageBookingModal('${p.id}')">
-            Book Vacation Package ➔
+        <!-- Package Action Buttons: View Details & Instant Book -->
+        <div style="padding: 0 18px 18px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px;">
+          <button type="button" class="btn light sm" onclick="openPackageDetailsModal('${p.id}')" style="font-weight:700; border-radius:var(--radius-sm); font-size:12.5px; padding:10px 0; justify-content:center;">
+            View Details
+          </button>
+          <button type="button" class="tourist-book-btn" onclick="openPackageBookingModal('${p.id}')" style="margin-top:0;">
+            Book Package ➔
           </button>
         </div>
       </div>
     `;
   }).join('');
+}
+
+let currentDetailPackageId = null;
+
+function openPackageDetailsModal(planId) {
+  const plan = state.touristPlans?.find(p => p.id === planId);
+  if (!plan) return;
+
+  currentDetailPackageId = planId;
+  const modal = document.getElementById('packageDetailsModal');
+  if (!modal) return;
+
+  const imgEl = document.getElementById('pkgDetailImg');
+  const durationEl = document.getElementById('pkgDetailDuration');
+  const destEl = document.getElementById('pkgDetailDest');
+  const titleEl = document.getElementById('pkgDetailTitle');
+  const taglineEl = document.getElementById('pkgDetailTagline');
+  const carrierEl = document.getElementById('pkgDetailCarrier');
+  const hotelEl = document.getElementById('pkgDetailHotel');
+  const itinList = document.getElementById('pkgDetailItineraryList');
+  const offerPriceEl = document.getElementById('pkgDetailOfferPrice');
+  const regularPriceEl = document.getElementById('pkgDetailRegularPrice');
+  const savingsPill = document.getElementById('pkgDetailSavingsPill');
+
+  if (imgEl) imgEl.src = plan.image_url || '/assets/images/hero_aviation.jpg';
+  if (durationEl) durationEl.textContent = `⏱️ ${plan.duration}`;
+  if (destEl) destEl.textContent = `📍 ${plan.destination}`;
+  if (titleEl) titleEl.textContent = plan.title;
+  if (taglineEl) taglineEl.textContent = plan.tagline;
+  if (carrierEl) carrierEl.textContent = `${plan.flight.carrier} (${plan.flight.sector})`;
+  if (hotelEl) hotelEl.textContent = `${plan.hotel.name} (★ ${plan.hotel.rating})`;
+  if (offerPriceEl) offerPriceEl.textContent = `₹${plan.pricing.price_with_offers.toLocaleString('en-IN')}`;
+  if (regularPriceEl) regularPriceEl.textContent = `₹${plan.pricing.price_without_offers.toLocaleString('en-IN')}`;
+  if (savingsPill) savingsPill.textContent = `Save ₹${plan.pricing.savings.toLocaleString('en-IN')}`;
+
+  if (itinList && plan.itinerary) {
+    itinList.innerHTML = plan.itinerary.map(day => `
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; padding:12px 14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <b style="color:var(--brand-cyan); font-size:13px;">${day.day}: ${day.title}</b>
+          <span class="badge blue" style="font-size:10px;">Day Activity</span>
+        </div>
+        <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">
+          ${day.activities.join(' · ')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  modal.classList.add('active');
+}
+
+function bookCurrentDetailPackage() {
+  closeModal('packageDetailsModal');
+  if (currentDetailPackageId) {
+    openPackageBookingModal(currentDetailPackageId);
+  }
 }
 
 function toggleItinerary(planId) {
@@ -1655,7 +1880,6 @@ function openPackageBookingModal(planId) {
 
   state.selectedPackage = plan;
   const detailsBox = document.getElementById('packageBookingDetails');
-  const amountEl = document.getElementById('pkgPayableAmount');
   const dateInput = document.getElementById('pkgTravelDate');
 
   if (detailsBox) {
@@ -1665,7 +1889,7 @@ function openPackageBookingModal(planId) {
           <h3 style="margin:0 0 4px; font-size:16px; color:var(--brand-cyan);">${plan.title}</h3>
           <span class="metric-sub">${plan.destination} · ${plan.duration}</span>
         </div>
-        <span class="badge green">Offer Applied</span>
+        <span class="badge green">Direct Booking Active</span>
       </div>
       <div style="font-size:12px; color:var(--text-main); margin-bottom:6px;">
         ✈️ <b>Flight:</b> ${plan.flight.carrier} (${plan.flight.sector})
@@ -1673,54 +1897,282 @@ function openPackageBookingModal(planId) {
       <div style="font-size:12px; color:var(--text-main); margin-bottom:10px;">
         🏨 <b>Hotel:</b> ${plan.hotel.name} (${plan.hotel.room_type})
       </div>
-      <div style="display:flex; justify-content:space-between; font-size:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;">
-        <span style="color:var(--text-muted);">Standard Rack Rate:</span>
-        <span style="text-decoration:line-through; color:var(--text-muted);">₹${plan.pricing.price_without_offers.toLocaleString('en-IN')}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--brand-mint); margin-top:4px;">
-        <span>Promo Discount (${plan.pricing.applied_promo}):</span>
-        <b>-₹${plan.pricing.savings.toLocaleString('en-IN')}</b>
+      <div style="font-size:11.5px; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.06); padding-top:6px;">
+        ✨ <b>Inclusions:</b> ${(plan.inclusions || []).join(' · ')}
       </div>
     `;
-  }
-
-  if (amountEl) {
-    amountEl.textContent = `₹${plan.pricing.price_with_offers.toLocaleString('en-IN')}`;
   }
 
   if (dateInput && !dateInput.value) {
     dateInput.value = new Date(Date.now() + 86400000 * 14).toISOString().slice(0, 10);
   }
 
+  onPackagePaxOrPromoChanged();
   openModal('bookPackageModal');
 }
 
-async function confirmPackageBooking() {
+async function onPackagePaxOrPromoChanged() {
   if (!state.selectedPackage) return;
+  const plan = state.selectedPackage;
 
-  const name = document.getElementById('pkgTravelerName')?.value || 'Guest Traveler';
-  const contact = document.getElementById('pkgTravelerContact')?.value || 'guest@example.com';
-  const travelDate = document.getElementById('pkgTravelDate')?.value || new Date().toISOString().slice(0, 10);
-
-  const payload = {
-    plan_id: state.selectedPackage.id,
-    traveler_name: name,
-    contact: contact,
-    travel_date: travelDate,
-    pax_count: 1
-  };
+  const paxEl = document.getElementById('pkgPaxCount');
+  const promoEl = document.getElementById('pkgPromoInput');
+  const pax = parseInt(paxEl ? paxEl.value : '1', 10) || 1;
+  const promoCode = promoEl ? promoEl.value.trim().toUpperCase() : '';
 
   try {
-    const res = await window.api.bookTouristPlan(payload);
-    closeModal('bookPackageModal');
-    showToast(`🎉 Vacation Package Booked! Confirmation Reference: ${res.booking_reference}`);
-    
-    alert(`🎉 Booking Confirmed!\n\nPackage: ${res.plan_title}\nTraveler: ${res.traveler_name}\nTravel Date: ${res.travel_date}\nFlight: ${res.flight_details}\nHotel: ${res.hotel_details}\nTotal Paid: ₹${res.amount_paid.toLocaleString('en-IN')}\nReference: ${res.booking_reference}\n\nYour e-tickets and hotel confirmation voucher have been sent to ${contact}.`);
+    // Authoritative Server-Side Price Calculation
+    const quote = await window.api.calculatePaymentPrice({
+      booking_type: 'package',
+      package_id: plan.id,
+      pax_count: pax,
+      promo_code: promoCode
+    });
+
+    state.currentPackageQuote = quote;
+
+    const baseEl = document.getElementById('pkgBreakdownBase');
+    const offerEl = document.getElementById('pkgBreakdownOffer');
+    const promoRow = document.getElementById('pkgBreakdownPromoRow');
+    const promoEl2 = document.getElementById('pkgBreakdownPromo');
+    const payableEl = document.getElementById('pkgPayableAmount');
+    const btnText = document.getElementById('btnProceedText');
+
+    const baseUnit = plan.pricing.price_without_offers || 0;
+    const totalBase = baseUnit * pax;
+    const packageDiscount = (plan.pricing.savings || 0) * pax;
+    const extraPromoDiscount = Math.max(0, quote.discount - packageDiscount);
+
+    if (baseEl) baseEl.textContent = `₹${totalBase.toLocaleString('en-IN')}`;
+    if (offerEl) offerEl.textContent = `-₹${packageDiscount.toLocaleString('en-IN')}`;
+
+    if (promoRow && promoEl2) {
+      if (extraPromoDiscount > 0) {
+        promoRow.style.display = 'flex';
+        promoEl2.textContent = `-₹${extraPromoDiscount.toLocaleString('en-IN')} (${quote.promo_applied})`;
+      } else {
+        promoRow.style.display = 'none';
+      }
+    }
+
+    if (payableEl) payableEl.textContent = `₹${quote.final_payable_amount.toLocaleString('en-IN')}`;
+    if (btnText) btnText.textContent = `Proceed to Payment (₹${quote.final_payable_amount.toLocaleString('en-IN')})`;
+
+    const btn = document.getElementById('btnProceedPackagePayment');
+    if (btn) btn.disabled = false;
+
   } catch (err) {
-    console.error('Failed to book package:', err);
-    showToast('Failed to complete booking. Please retry.', false);
+    console.warn('Failed to calculate server quote:', err);
+    state.currentPackageQuote = null;
+    const btn = document.getElementById('btnProceedPackagePayment');
+    if (btn) btn.disabled = true;
+    const btnText = document.getElementById('btnProceedText');
+    if (btnText) btnText.textContent = 'Fare Calculation Unavailable';
+    const payableEl = document.getElementById('pkgPayableAmount');
+    if (payableEl) payableEl.textContent = 'Unable to calculate the latest fare. Please try again.';
   }
 }
+
+async function initiatePackagePayment() {
+  if (!state.selectedPackage) return;
+  if (!state.currentPackageQuote) {
+    showToast('Unable to calculate the latest fare. Please try again.', false);
+    return;
+  }
+  const plan = state.selectedPackage;
+
+  const travelerName = document.getElementById('pkgTravelerName')?.value?.trim();
+  const travelerEmail = document.getElementById('pkgTravelerEmail')?.value?.trim();
+  const travelerPhone = document.getElementById('pkgTravelerPhone')?.value?.trim();
+  const travelDate = document.getElementById('pkgTravelDate')?.value;
+  const pax = parseInt(document.getElementById('pkgPaxCount')?.value || '1', 10) || 1;
+  const promo = document.getElementById('pkgPromoInput')?.value?.trim();
+
+  if (!travelerName || !travelerEmail || !travelerPhone || !travelDate) {
+    showToast('Please fill all mandatory traveler contact & date fields', false);
+    return;
+  }
+
+  const btn = document.getElementById('btnProceedPackagePayment');
+  const btnText = document.getElementById('btnProceedText');
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.textContent = 'Creating Payment Order...';
+
+  try {
+    const orderPayload = {
+      booking_type: 'package',
+      package_id: plan.id,
+      traveler_name: travelerName,
+      email: travelerEmail,
+      phone: travelerPhone,
+      travel_date: travelDate,
+      pax_count: pax,
+      promo_code: promo || null
+    };
+
+    const orderRes = await window.api.createPaymentOrder(orderPayload);
+    state.activePaymentOrder = orderRes;
+
+    closeModal('bookPackageModal');
+
+    if (orderRes.is_sandbox) {
+      // Open Cryptographic Sandbox Gateway
+      const sbxOrderId = document.getElementById('sbxOrderId');
+      const sbxAmount = document.getElementById('sbxAmount');
+      const sbxTraveler = document.getElementById('sbxTraveler');
+      const sbxProcessing = document.getElementById('sbxProcessing');
+      const sbxActions = document.getElementById('sbxActionButtons');
+
+      if (sbxOrderId) sbxOrderId.textContent = orderRes.order_id;
+      if (sbxAmount) sbxAmount.textContent = `₹${orderRes.amount_inr.toLocaleString('en-IN')}`;
+      if (sbxTraveler) sbxTraveler.textContent = `${travelerName} (${pax} Pax)`;
+      if (sbxProcessing) sbxProcessing.style.display = 'none';
+      if (sbxActions) sbxActions.style.display = 'flex';
+
+      openModal('sandboxPaymentModal');
+    } else {
+      // Official Razorpay Gateway
+      launchRazorpayCheckout(orderRes);
+    }
+
+  } catch (err) {
+    console.error('Failed to initiate payment order:', err);
+    showToast(err.message || 'Payment initiation failed. Please retry.', false);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = 'Proceed to Payment';
+  }
+}
+
+function launchRazorpayCheckout(order) {
+  if (typeof Razorpay === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => openRazorpayModal(order);
+    script.onerror = () => {
+      showToast('Could not load Razorpay SDK. Please check internet connection.', false);
+    };
+    document.body.appendChild(script);
+  } else {
+    openRazorpayModal(order);
+  }
+}
+
+function openRazorpayModal(order) {
+  const options = {
+    key: order.key_id,
+    amount: order.amount_paise,
+    currency: order.currency || 'INR',
+    name: 'AirfareX India',
+    description: order.package_title || 'Holiday Package Booking',
+    order_id: order.order_id,
+    prefill: {
+      name: order.traveler_name,
+      email: order.email,
+      contact: order.phone
+    },
+    theme: {
+      color: '#0ea5e9'
+    },
+    handler: async function (response) {
+      try {
+        showToast('Verifying payment signature with banking gateway...');
+        const verifyRes = await window.api.verifyPayment({
+          booking_id: order.booking_id,
+          order_id: response.razorpay_order_id,
+          payment_id: response.razorpay_payment_id,
+          signature: response.razorpay_signature
+        });
+        showConfirmedPackageVoucher(verifyRes);
+      } catch (err) {
+        showPaymentFailureView(order.order_id, order.amount_inr, err.message || 'Signature verification failed.');
+      }
+    },
+    modal: {
+      ondismiss: function () {
+        showPaymentFailureView(order.order_id, order.amount_inr, 'Payment was cancelled or closed by user.');
+      }
+    }
+  };
+
+  const rzp = new Razorpay(options);
+  rzp.on('payment.failed', function (resp) {
+    showPaymentFailureView(order.order_id, order.amount_inr, resp.error.description || 'Payment declined by bank.');
+  });
+  rzp.open();
+}
+
+async function executeSandboxPayment(action) {
+  const order = state.activePaymentOrder;
+  if (!order) return;
+
+  const sbxProcessing = document.getElementById('sbxProcessing');
+  const sbxActions = document.getElementById('sbxActionButtons');
+  const sbxText = document.getElementById('sbxProcessText');
+
+  if (sbxActions) sbxActions.style.display = 'none';
+  if (sbxProcessing) sbxProcessing.style.display = 'block';
+
+  if (action === 'AUTHORIZE') {
+    if (sbxText) sbxText.textContent = 'Contacting Banking Switch & Validating HMAC Signature...';
+  } else {
+    if (sbxText) sbxText.textContent = 'Simulating Payment Decline from Banking Switch...';
+  }
+
+  try {
+    const res = await window.api.sandboxAuthorize({
+      order_id: order.order_id,
+      booking_id: order.booking_id,
+      action: action,
+      failure_reason: action === 'DECLINE' ? 'User cancelled or declined authorization' : null
+    });
+
+    setTimeout(() => {
+      closeModal('sandboxPaymentModal');
+      if (res && res.status === 'CONFIRMED') {
+        showConfirmedPackageVoucher(res);
+      } else {
+        showPaymentFailureView(order.order_id, order.amount_inr, res.message || 'Payment authorization declined.');
+      }
+    }, 800);
+
+  } catch (err) {
+    setTimeout(() => {
+      closeModal('sandboxPaymentModal');
+      showPaymentFailureView(order.order_id, order.amount_inr, err.message || 'Authorization rejected.');
+    }, 700);
+  }
+}
+
+function showConfirmedPackageVoucher(res) {
+  document.getElementById('pkgConfPnr') && (document.getElementById('pkgConfPnr').textContent = res.pnr || res.booking_id);
+  document.getElementById('pkgConfHotelVoucher') && (document.getElementById('pkgConfHotelVoucher').textContent = res.voucher_id || 'HTL-84920');
+  document.getElementById('pkgConfTitle') && (document.getElementById('pkgConfTitle').textContent = res.package_title || state.selectedPackage?.title || 'Tour Package');
+  document.getElementById('pkgConfTraveler') && (document.getElementById('pkgConfTraveler').textContent = res.traveler_name || 'Guest Traveler');
+  document.getElementById('pkgConfDatePax') && (document.getElementById('pkgConfDatePax').textContent = `${res.travel_date || ''} · Verified Booking`);
+  document.getElementById('pkgConfSeat') && (document.getElementById('pkgConfSeat').textContent = `Seat ${res.seat_number || '14A'} (Confirmed)`);
+  document.getElementById('pkgConfPayId') && (document.getElementById('pkgConfPayId').textContent = res.payment_id || 'PGW-SUCCESS');
+  document.getElementById('pkgConfAmount') && (document.getElementById('pkgConfAmount').textContent = `₹${(res.amount_inr || 0).toLocaleString('en-IN')}`);
+
+  openModal('packageConfirmedModal');
+  showToast(`🎉 Booking Confirmed! Official PNR: ${res.pnr || res.booking_id}`);
+}
+
+function showPaymentFailureView(orderId, amount, reason) {
+  document.getElementById('pkgFailOrderId') && (document.getElementById('pkgFailOrderId').textContent = orderId || 'order_unknown');
+  document.getElementById('pkgFailAmount') && (document.getElementById('pkgFailAmount').textContent = `₹${(amount || 0).toLocaleString('en-IN')}`);
+  document.getElementById('pkgFailReason') && (document.getElementById('pkgFailReason').textContent = reason || 'Payment authorization declined by issuing bank');
+
+  openModal('packageFailedModal');
+  showToast('Payment declined: No seats or hotel rooms booked.', false);
+}
+
+window.openPackageBookingModal = openPackageBookingModal;
+window.onPackagePaxOrPromoChanged = onPackagePaxOrPromoChanged;
+window.initiatePackagePayment = initiatePackagePayment;
+window.executeSandboxPayment = executeSandboxPayment;
+window.showConfirmedPackageVoucher = showConfirmedPackageVoucher;
+window.showPaymentFailureView = showPaymentFailureView;
 
 // Event Listeners on DOMContentLoaded
 window.addEventListener('DOMContentLoaded', () => {
@@ -1771,72 +2223,18 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // =========================================================
-// SUPABASE CLOUD DATABASE CONTROLLER
+// SYSTEM & SUPABASE STATUS (READ-ONLY)
 // =========================================================
-function openSupabaseModal() {
-  openModal('supabaseModal');
-  checkSupabaseConnectionLive();
-}
-
 async function checkSupabaseConnectionLive() {
-  const badge = document.getElementById('supaStatusBadge');
-  const msg = document.getElementById('supaStatusMsg');
-
-  if (badge) {
-    badge.className = 'badge amber';
-    badge.textContent = 'Checking...';
-  }
-  if (msg) {
-    msg.textContent = 'Pinging Supabase PostgREST API (https://thtwkhhccxmkkgwtoleb.supabase.co)...';
-  }
-
   try {
     const res = await window.api.getSupabaseStatus();
-    if (badge) {
-      if (res.connected) {
-        badge.className = 'badge green';
-        badge.textContent = 'Connected (Authenticated)';
-      } else if (res.status_code === 401) {
-        badge.className = 'badge amber';
-        badge.textContent = 'Online (Awaiting API Key)';
-      } else {
-        badge.className = 'badge red';
-        badge.textContent = 'Disconnected';
-      }
-    }
-    if (msg) {
-      msg.innerHTML = `<b>${res.message}</b><br><span style="font-size:11px; color:var(--text-muted);">Endpoint: ${res.project_url} · Project ID: ${res.project_id}</span>`;
-    }
+    return res;
   } catch (err) {
-    if (badge) {
-      badge.className = 'badge red';
-      badge.textContent = 'Offline';
-    }
-    if (msg) {
-      msg.textContent = `Error connecting to Supabase: ${err.message}`;
-    }
+    console.warn('[Supabase Status]', err.message);
+    return { connected: false, message: err.message };
   }
 }
 
-async function saveSupabaseKey() {
-  const keyInput = document.getElementById('supaKeyInput');
-  const key = keyInput ? keyInput.value.trim() : '';
-
-  if (!key) {
-    showToast('Please enter your Supabase Anon or Service Role key', false);
-    return;
-  }
-
-  try {
-    const res = await window.api.updateSupabaseConfig(key);
-    showToast(res.message);
-    checkSupabaseConnectionLive();
-  } catch (err) {
-    showToast(`Failed to update key: ${err.message}`, false);
-  }
-}
-
-window.openSupabaseModal = openSupabaseModal;
 window.checkSupabaseConnectionLive = checkSupabaseConnectionLive;
-window.saveSupabaseKey = saveSupabaseKey;
+
 

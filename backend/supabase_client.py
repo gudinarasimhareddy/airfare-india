@@ -136,40 +136,5 @@ async def get_supabase_status():
     health = await check_supabase_health()
     return health
 
-class ConfigUpdateRequest(BaseModel):
-    supabase_key: str
-    supabase_url: Optional[str] = None
 
-@router.post("/config")
-def update_supabase_config(req: ConfigUpdateRequest):
-    """Sets or updates the Supabase API Key live and persists it to .env"""
-    global SUPABASE_KEY, SUPABASE_URL
-    
-    key = req.supabase_key.strip()
-    if not key:
-        raise HTTPException(status_code=400, detail="Supabase API key cannot be empty")
 
-    SUPABASE_KEY = key
-    os.environ["SUPABASE_KEY"] = key
-    if req.supabase_url:
-        SUPABASE_URL = req.supabase_url.strip().rstrip("/")
-        os.environ["SUPABASE_URL"] = SUPABASE_URL
-
-    # Persist to .env
-    env_content = f"""# AirfareX India — Supabase & Environment Configuration
-SUPABASE_URL={SUPABASE_URL}
-SUPABASE_KEY={SUPABASE_KEY}
-"""
-    try:
-        with open(ENV_PATH, "w", encoding="utf-8") as f:
-            f.write(env_content)
-    except Exception as e:
-        print(f"Warning writing .env: {e}")
-
-    return {
-        "status": "success",
-        "message": f"Supabase key updated successfully for {SUPABASE_URL}",
-        "project_url": SUPABASE_URL,
-        "project_id": PROJECT_ID,
-        "configured": True
-    }

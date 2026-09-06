@@ -114,5 +114,64 @@ def init_db():
     )
     """)
 
+    # Production-ready Bookings table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS bookings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id TEXT UNIQUE NOT NULL,
+        user_id TEXT DEFAULT 'guest',
+        booking_type TEXT NOT NULL DEFAULT 'flight', -- 'flight' or 'package'
+        package_id TEXT,
+        flight_no TEXT,
+        airline TEXT,
+        sector TEXT,
+        traveler_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        travel_date TEXT NOT NULL,
+        pax_count INTEGER NOT NULL DEFAULT 1,
+        amount INTEGER NOT NULL, -- Trusted server-computed total amount in INR
+        currency TEXT NOT NULL DEFAULT 'INR',
+        payment_status TEXT NOT NULL DEFAULT 'PAYMENT_PENDING',
+        booking_status TEXT NOT NULL DEFAULT 'DRAFT',
+        payment_order_id TEXT,
+        payment_id TEXT,
+        seat_number TEXT,
+        pnr TEXT,
+        voucher_id TEXT,
+        pricing_breakdown TEXT, -- JSON string of trusted cost decomposition
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # Production-ready Payments table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        payment_id TEXT UNIQUE,
+        order_id TEXT UNIQUE NOT NULL,
+        booking_id TEXT NOT NULL,
+        amount INTEGER NOT NULL, -- Amount in paise
+        currency TEXT NOT NULL DEFAULT 'INR',
+        status TEXT NOT NULL DEFAULT 'CREATED', -- 'CREATED', 'AUTHORIZED', 'CAPTURED', 'FAILED'
+        method TEXT,
+        signature TEXT,
+        error_code TEXT,
+        error_description TEXT,
+        idempotency_key TEXT UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # Fast lookup indexes
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bookings_id ON bookings(booking_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bookings_pnr ON bookings(pnr)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bookings_order ON bookings(payment_order_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_payments_id ON payments(payment_id)")
+
     conn.commit()
     conn.close()
+

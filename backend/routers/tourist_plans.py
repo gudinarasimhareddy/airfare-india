@@ -337,6 +337,8 @@ class BookTouristPlanRequest(BaseModel):
     passengers_count: Optional[int] = 1
     pax_count: Optional[int] = 1
     promo_code: Optional[str] = None
+    payment_order_id: Optional[str] = None
+    payment_id: Optional[str] = None
 
 @router.get("")
 def list_tourist_plans(destination: Optional[str] = Query(None, description="Filter by airport destination code")):
@@ -359,46 +361,102 @@ def get_tourist_plan(plan_id: str):
         raise HTTPException(status_code=404, detail=f"Tourist package '{plan_id}' not found.")
     return _normalize_plan(plan)
 
+@router.post("/calculate-quote")
+def calculate_plan_quote(req: BookTouristPlanRequest):
+    """Calculates authoritative server-side price breakdown for package booking."""
+    plan = next((p for p in TOURIST_PACKAGES if p["id"] == req.plan_id), None)
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Tourist package '{req.plan_id}' not found.")
+    pax = max(1, min(req.pax_count or req.passengers_count or 1, 9))
+    base_unit = plan["pricing"]["price_without_offers"]
+    offer_unit = plan["pricing"]["price_with_offers"]
+    package_savings_unit = plan["pricing"]["savings"]
+    base_total = base_unit * pax
+    discount = package_savings_unit * pax
+    promo_applied = plan["pricing"].get("applied_promo", "OFFER_RATE")
+
+    if req.promo_code:
+        code = req.promo_code.upper().strip()
+        if code == "AIRX500":
+            discount += 500
+            promo_applied += " + AIRX500"
+        elif code == "FESTIVE1000":
+            discount += 1000
+            promo_applied += " + FESTIVE1000"
+        elif code == "STUDENT":
+            discount += 600
+            promo_applied += " + STUDENT"
+
+    final_payable = max(100, base_total - discount)
+    return {
+        "plan_id": plan["id"],
+        "plan_title": plan.get("package_title") or plan.get("title"),
+        "city_name": plan["city_name"],
+        "pax_count": pax,
+        "base_total": base_total,
+        "package_offer_total": offer_unit * pax,
+        "discount": discount,
+        "promo_applied": promo_applied,
+        "final_payable": final_payable,
+        "currency": "INR",
+        "inclusions": plan["inclusions"]
+    }
+
 @router.post("/book")
 def book_tourist_plan(req: BookTouristPlanRequest):
-    """Book tourist package and generate confirmation voucher."""
+    """
+    Enforces that a tourist package booking MUST have a verified payment before confirmation.
+    Unverified or unpaid requests are rejected with HTTP 402.
+    """
     plan = next((p for p in TOURIST_PACKAGES if p["id"] == req.plan_id), None)
     if not plan:
         raise HTTPException(status_code=404, detail=f"Tourist package '{req.plan_id}' not found.")
 
-    pax = req.pax_count or req.passengers_count or 1
-    name = req.traveler_name or req.passenger_name or "Valued Guest"
-    pnr = f"PKG-AIRX{random.randint(1000, 9999)}"
-    hotel_booking_id = f"HTL-{random.randint(10000, 99999)}"
+    if not req.payment_order_id:
+        raise HTTPException(
+            status_code=402,
+            detail="Payment Required: Unpaid bookings cannot be confirmed. Please create a payment order via POST /api/v1/payments/create-order and complete verification at /api/v1/payments/verify."
+        )
+
+    # Verify that the payment order exists and is verified/captured in SQLite DB
+    from backend.database import get_db_connection
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM payments WHERE order_id = ? AND status IN ('SUCCESS', 'CAPTURED')",
+        (req.payment_order_id,)
+    )
+    payment_row = cursor.fetchone()
     
-    total_without_offer = plan["pricing"]["price_without_offers"] * pax
-    total_with_offer = plan["pricing"]["price_with_offers"] * pax
-    total_saved = total_without_offer - total_with_offer
+    if not payment_row:
+        conn.close()
+        raise HTTPException(
+            status_code=402,
+            detail=f"Payment for order '{req.payment_order_id}' has not been completed or verified."
+        )
+    
+    # Retrieve confirmed booking
+    cursor.execute("SELECT * FROM bookings WHERE payment_order_id = ?", (req.payment_order_id,))
+    booking_row = cursor.fetchone()
+    conn.close()
 
-    carrier = plan["flight"].get("carrier", plan["flight"].get("airline", "IndiGo"))
-    sector = plan["flight"].get("sector", plan["flight"].get("type", "Return Flights"))
+    if booking_row:
+        b = dict(booking_row)
+        return {
+            "status": "confirmed",
+            "booking_reference": b.get("pnr") or b["booking_id"],
+            "booking_id": b["booking_id"],
+            "plan_title": plan.get("package_title") or plan.get("title"),
+            "destination": plan["city_name"],
+            "traveler_name": b.get("traveler_name"),
+            "travel_date": b.get("travel_date"),
+            "pax_count": b.get("pax_count"),
+            "amount_paid": b.get("amount"),
+            "payment_id": b.get("payment_id"),
+            "payment_order_id": b.get("payment_order_id"),
+            "message": f"Booking confirmed for {b.get('traveler_name')} under PNR {b.get('pnr')}."
+        }
+    
+    raise HTTPException(status_code=404, detail="Associated booking record not found.")
 
-    return {
-        "status": "confirmed",
-        "booking_reference": pnr,
-        "hotel_voucher": hotel_booking_id,
-        "plan_title": plan.get("package_title") or plan.get("title"),
-        "package_title": plan.get("package_title") or plan.get("title"),
-        "destination": plan["city_name"],
-        "traveler_name": name,
-        "passenger_name": name,
-        "travel_date": req.travel_date,
-        "pax_count": pax,
-        "amount_paid": total_with_offer,
-        "flight_details": f"{carrier} ({sector})",
-        "hotel_details": f"{plan['hotel']['name']} ({plan['hotel']['room_type']})",
-        "pricing_breakdown": {
-            "regular_total_without_offers": total_without_offer,
-            "final_payable_with_offers": total_with_offer,
-            "total_savings": total_saved,
-            "applied_promo": plan["pricing"]["applied_promo"]
-        },
-        "inclusions": plan["inclusions"],
-        "message": f"Congratulations {name}! Your holiday package to {plan['city_name']} is confirmed under PNR {pnr}. You saved ₹{total_saved:,} with our offer rate."
-    }
 

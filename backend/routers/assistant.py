@@ -480,17 +480,30 @@ def process_agentic_chat(req: ChatRequest):
                 detail="Validated against DGCA CAR Section 3 banking turnaround SLAs."
             ))
 
-            reply = (
-                f"### 💳 Refund Status for PNR **{data['pnr']}**\n\n"
-                f"• **Passenger:** {data['passenger_name']}\n"
-                f"• **Flight & Sector:** {data['airline']} ({data['sector']})\n"
-                f"• **Current Status:** **Stage {data['stage']}/4 — {data['status']}**\n"
-                f"• **Total Ticket Fare:** ₹{data['total_fare']:,}\n"
-                f"• **Airline Cancellation Fee:** ₹{data['cancellation_fee']:,}\n"
-                f"• **Net Refund Credited:** **₹{data['refund_amount']:,}**\n"
-                f"• **Bank Reference (ARN/UTR):** `{data['arn_number']}`\n\n"
-                f"Under DGCA CAR Section 3, electronic refunds via UPI/NetBanking are required within 3 business days."
-            )
+            if lang == "hi":
+                reply = (
+                    f"### 💳 पीएनआर **{data['pnr']}** के लिए रिफंड स्थिति\n\n"
+                    f"• **यात्री:** {data['passenger_name']}\n"
+                    f"• **उड़ान एवं सेक्टर:** {data['airline']} ({data['sector']})\n"
+                    f"• **वर्तमान स्थिति:** **चरण {data['stage']}/5 — {data['status']}**\n"
+                    f"• **कुल टिकट किराया:** ₹{data['total_fare']:,}\n"
+                    f"• **एयरलाइन रद्दीकरण शुल्क:** ₹{data['cancellation_fee']:,}\n"
+                    f"• **शुद्ध रिफंड राशि:** **₹{data['refund_amount']:,}**\n"
+                    f"• **बैंक संदर्भ (ARN/UTR):** `{data['arn_number']}`\n\n"
+                    f"डीजीसीए (DGCA CAR Section 3) नियमों के तहत इलेक्ट्रॉनिक रिफंड 3 कार्य दिवसों के भीतर बैंक खाते में जमा किया जाता है।"
+                )
+            else:
+                reply = (
+                    f"### 💳 Refund Status for PNR **{data['pnr']}**\n\n"
+                    f"• **Passenger:** {data['passenger_name']}\n"
+                    f"• **Flight & Sector:** {data['airline']} ({data['sector']})\n"
+                    f"• **Current Status:** **Stage {data['stage']}/5 — {data['status']}**\n"
+                    f"• **Total Ticket Fare:** ₹{data['total_fare']:,}\n"
+                    f"• **Airline Cancellation Fee:** ₹{data['cancellation_fee']:,}\n"
+                    f"• **Net Refund Credited:** **₹{data['refund_amount']:,}**\n"
+                    f"• **Bank Reference (ARN/UTR):** `{data['arn_number']}`\n\n"
+                    f"Under DGCA CAR Section 3, electronic refunds via UPI/NetBanking are required within 3 business days."
+                )
 
             return ChatResponse(
                 reply=reply,

@@ -39,21 +39,31 @@
   <!-- Main Booking Container -->
   <main class="booking-container">
 
-    <!-- Active Stepper -->
+    <!-- 5-Step Payment & Booking Stepper (Issue #10) -->
     <div class="checkout-stepper" id="checkoutStepper">
       <div class="step-item active" id="step1Indicator">
         <div class="step-num">1</div>
-        <span>Flight Review & Fees</span>
+        <span>Trip Details</span>
       </div>
       <div class="step-divider" id="stepDiv1"></div>
       <div class="step-item" id="step2Indicator">
         <div class="step-num">2</div>
-        <span>Passenger & GST</span>
+        <span>Travelers</span>
       </div>
       <div class="step-divider" id="stepDiv2"></div>
       <div class="step-item" id="step3Indicator">
         <div class="step-num">3</div>
-        <span>UPI Payment & E-Ticket</span>
+        <span>Review</span>
+      </div>
+      <div class="step-divider" id="stepDiv3"></div>
+      <div class="step-item" id="step4Indicator">
+        <div class="step-num">4</div>
+        <span>Payment</span>
+      </div>
+      <div class="step-divider" id="stepDiv4"></div>
+      <div class="step-item" id="step5Indicator">
+        <div class="step-num">5</div>
+        <span>Confirmation</span>
       </div>
     </div>
 
@@ -392,7 +402,7 @@
                   </div>
 
                   <div id="vpaStatusBadge" style="font-size:11.5px; color:var(--brand-mint); font-weight:700; margin-top:6px; display:block;">
-                    ✓ Verified: RAJESH SHARMA (HDFC Bank)
+                    ✓ UPI ID format looks valid
                   </div>
                 </div>
 
@@ -453,49 +463,61 @@
       <div class="checkout-right-col">
         <div class="sticky-fare-summary">
           <h3 style="margin:0 0 14px; font-size:17px; color:var(--text-main); display:flex; justify-content:space-between; align-items:center;">
-            <span>Fare & Taxes Breakdown</span>
+            <span>Authoritative Price Breakdown</span>
             <span class="badge blue">1 Passenger</span>
           </h3>
 
-          <!-- Fee Decomposition Table -->
+          <!-- Fee Decomposition Table (Issue #14) -->
           <table class="fare-breakdown-table">
             <tbody>
               <!-- Base Fare -->
               <tr>
-                <td>Base Airfare (Airline Rack)</td>
-                <td id="feeBaseFare">₹4,120</td>
+                <td>Base Fare (Airline)</td>
+                <td id="feeBaseFare">₹--</td>
+              </tr>
+
+              <!-- Hotel (Packages/Flight indicator) -->
+              <tr id="feeHotelRow" style="color:var(--text-muted); font-size:12px;">
+                <td>Hotel Stay</td>
+                <td id="feeHotelVal">N/A (Direct Flight)</td>
+              </tr>
+
+              <!-- Transfers (Packages/Flight indicator) -->
+              <tr id="feeTransferRow" style="color:var(--text-muted); font-size:12px;">
+                <td>Ground Transfers</td>
+                <td id="feeTransferVal">N/A (Direct Flight)</td>
               </tr>
 
               <!-- Fuel Surcharge (YQ) -->
               <tr>
                 <td>Airline Fuel Surcharge (YQ)</td>
-                <td id="feeYq">₹450</td>
+                <td id="feeYq">₹--</td>
               </tr>
 
               <!-- Airport User Development Fee (UDF) -->
               <tr>
                 <td>User Development Fee (UDF)</td>
-                <td id="feeUdf">₹380</td>
+                <td id="feeUdf">₹--</td>
               </tr>
 
               <!-- Aviation Security Fee (ASF/PSF - Statutory) -->
               <tr>
                 <td>Aviation Security Fee (ASF/PSF)</td>
-                <td id="feeAsf">₹236</td>
+                <td id="feeAsf">₹--</td>
               </tr>
 
               <!-- GST Section (5% Total) -->
               <tr class="fee-sub-row">
                 <td>↳ Central GST (CGST @ 2.5%)</td>
-                <td id="feeCgst">₹114</td>
+                <td id="feeCgst">₹--</td>
               </tr>
               <tr class="fee-sub-row">
                 <td>↳ State GST (SGST @ 2.5%)</td>
-                <td id="feeSgst">₹114</td>
+                <td id="feeSgst">₹--</td>
               </tr>
               <tr>
                 <td>Total Indian GST (5% SAC 9964)</td>
-                <td id="feeTotalGst" style="color:var(--brand-mint);">₹228</td>
+                <td id="feeTotalGst" style="color:var(--brand-mint);">₹--</td>
               </tr>
 
               <!-- Add-ons Subtotal -->
@@ -514,15 +536,14 @@
               <tr class="divider-row">
                 <td>Payment Convenience Fee</td>
                 <td id="feeConvenience">
-                  <span style="text-decoration:line-through; font-size:11.5px; color:var(--text-subtle);">₹350</span>
-                  <span style="color:var(--brand-mint); font-weight:800; margin-left:4px;">₹0 (Waived)</span>
+                  <span style="color:var(--brand-mint); font-weight:800;">₹0 (Waived for UPI)</span>
                 </td>
               </tr>
 
               <!-- Total Payable -->
               <tr class="total-row">
-                <td>Total Net Payable</td>
-                <td id="feeTotalPayable">₹5,414</td>
+                <td>Final Payable Amount</td>
+                <td id="feeTotalPayable">₹--</td>
               </tr>
             </tbody>
           </table>
@@ -538,9 +559,14 @@
             <span style="cursor:pointer; font-weight:800;" onclick="removeBookingCoupon()">✕</span>
           </div>
 
-          <!-- Big Pay Now CTA -->
+          <!-- Price Calculation Error Notice (Issue #8) -->
+          <div id="pricingErrorNotice" style="display:none; padding:10px 14px; margin-top:12px; margin-bottom:12px; border-radius:8px; background:rgba(244,63,94,0.12); border:1px solid rgba(244,63,94,0.4); color:var(--brand-rose); font-size:12.5px; text-align:center; font-weight:600;">
+            ⚠️ Unable to calculate the latest fare. Please try again.
+          </div>
+
+          <!-- Big Pay Now CTA (Issue #8, #14) -->
           <button class="pay-btn-main" id="payNowBtn" onclick="submitBookingCheckout()">
-            <span>🔒 Pay <span id="btnPayAmount">₹4,914</span> & Book Flight</span>
+            <span>🔒 Proceed to Secure Payment (<span id="btnPayAmount">₹--</span>)</span>
           </button>
 
           <!-- Security & DGCA Compliance Badges -->
@@ -565,10 +591,10 @@
       <div class="ticket-success-header">
         <div class="success-check-badge">✓</div>
         <h2 style="font-size:26px; font-weight:800; margin:0 0 6px; color:var(--brand-mint);">
-          Payment Verified & Booking Confirmed!
+          🎉 You're all set! Your trip is confirmed.
         </h2>
         <p style="font-size:14px; color:var(--text-muted); margin:0;">
-          Payment settled via <b id="confPaymentMethod" style="color:var(--brand-cyan);">UPI</b>. Your flight ticket has been confirmed with the airline reservation system. Details sent to <b id="confSentEmail" style="color:var(--brand-cyan);">rajesh.sharma@example.com</b> and SMS to <b id="confSentPhone" style="color:var(--text-main);">+91 9876543210</b>.
+          Payment settled via <b id="confPaymentMethod" style="color:var(--brand-cyan);">UPI</b>. Your flight ticket and seat have been officially reserved with the airline. Details sent to <b id="confSentEmail" style="color:var(--brand-cyan);">rajesh.sharma@example.com</b> and SMS to <b id="confSentPhone" style="color:var(--text-main);">+91 9876543210</b>.
         </p>
       </div>
 
@@ -678,12 +704,14 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:11.5px;">
               <div>
                 Airline GSTIN: <b style="color:var(--text-main);" id="confAirlineGstin">07AAACI1111A1Z1</b><br>
-                Recipient: <span id="confRecipient">Rajesh Sharma</span>
+                Recipient: <span id="confRecipient">Rajesh Sharma</span><br>
+                Booking ID: <b style="color:var(--brand-cyan); font-family:monospace;" id="confBookingId">--</b><br>
+                Payment ID: <b style="color:var(--brand-mint); font-family:monospace;" id="confPaymentId">--</b>
               </div>
               <div style="text-align:right;">
-                Taxable Value: <b id="confTaxableVal">₹4,570</b><br>
-                GST (CGST 2.5% + SGST 2.5%): <b id="confGstVal">₹228</b><br>
-                Total Paid: <b style="color:var(--brand-cyan);" id="confTotalPaid">₹4,914</b>
+                Taxable Value: <b id="confTaxableVal">₹--</b><br>
+                GST (CGST 2.5% + SGST 2.5%): <b id="confGstVal">₹--</b><br>
+                Total Paid: <b style="color:var(--brand-cyan); font-size:15px;" id="confTotalPaid">₹--</b>
               </div>
             </div>
           </div>
@@ -709,16 +737,16 @@
       <div class="payment-failed-card">
         <div class="failed-icon-circle">✕</div>
         <h2 style="font-size:26px; font-weight:800; margin:0 0 8px; color:var(--brand-rose);">
-          Payment Failed — Booking Incomplete
+          Payment wasn't completed
         </h2>
         <p style="font-size:14px; color:var(--text-muted); margin:0 auto; max-width:560px;">
-          We could not process your transaction. Your seat has <b style="color:#ffffff;">NOT</b> been confirmed and no airline PNR was issued.
+          Don't worry — your booking has not been confirmed and no charges were incurred.
         </p>
 
         <!-- No Seat Allocated Warning Banner -->
         <div class="failed-no-seat-banner" style="margin-top:20px;">
           <span>⚠️</span>
-          <span><b>SEATS NOT BOOKED:</b> Airline seat inventory was not reserved because payment authorization failed.</span>
+          <span><b>SEATS NOT BOOKED:</b> Airline seat inventory was not reserved because payment authorization was not completed.</span>
         </div>
 
         <!-- Transaction Failure Details -->
@@ -749,10 +777,10 @@
         <!-- Action Buttons -->
         <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:26px;">
           <button class="btn primary" onclick="retryBookingPayment()" style="background:var(--brand-cyan); color:#000; font-weight:800; display:flex; align-items:center; gap:8px;">
-            <span>🔄</span> <span>Retry Payment (Same Details)</span>
+            <span>🔄</span> <span>Try Again</span>
           </button>
           <button class="btn light" onclick="changePaymentMethod()" style="display:flex; align-items:center; gap:8px;">
-            <span>💳</span> <span>Choose Another Payment Method</span>
+            <span>💳</span> <span>Change Payment Method</span>
           </button>
           <button class="btn light" onclick="window.location.href='/'" style="display:flex; align-items:center; gap:8px;">
             <span>🔍</span> <span>Search Other Flights</span>
@@ -770,8 +798,11 @@
         <div style="display:flex; align-items:center; gap:10px;">
           <span style="font-size:20px;">🔒</span>
           <div>
-            <div style="font-weight:800; font-size:14px; color:var(--text-main);" id="pgModalTitle">NPCI UPI Gateway</div>
-            <div style="font-size:10.5px; color:var(--text-muted);">256-bit Bank Grade Encrypted Session</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="font-weight:800; font-size:14px; color:var(--text-main);" id="pgModalTitle">Payment Authorization</div>
+              <span id="pgSandboxBadge" class="badge yellow" style="font-size:10px; padding:2px 8px;">Sandbox/Test Payment</span>
+            </div>
+            <div style="font-size:10.5px; color:var(--text-muted);">256-bit Cryptographically Verified Payment Session</div>
           </div>
         </div>
         <div style="cursor:pointer; font-size:18px; color:var(--text-muted);" onclick="cancelPaymentAuthorization()">✕</div>
@@ -783,10 +814,11 @@
           <div>
             <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Payee Merchant</div>
             <div style="font-size:13px; font-weight:700; color:var(--text-main);">AirfareX India Aviation Pvt Ltd</div>
+            <div style="font-size:11px; color:var(--brand-cyan); font-family:monospace; margin-top:2px;" id="pgOrderIdDisplay">Order: --</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Amount Payable</div>
-            <div style="font-size:18px; font-weight:800; color:var(--brand-cyan);" id="pgModalAmount">₹4,914</div>
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Authoritative Amount</div>
+            <div style="font-size:18px; font-weight:800; color:var(--brand-cyan);" id="pgModalAmount">₹--</div>
           </div>
         </div>
 
@@ -832,14 +864,14 @@
           <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Please do not refresh or press back.</div>
         </div>
 
-        <!-- Gateway Action Buttons -->
+        <!-- Gateway Action Buttons (Issue #6, #15) -->
         <div id="pgActionButtons" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">
-          <button type="button" class="btn primary" onclick="authorizePaymentSuccess()" style="width:100%; justify-content:center; padding:13px; font-size:14px; background:linear-gradient(135deg, #10b981, #059669); border:none;">
-            <span>✓ Complete & Authorize Payment</span>
+          <button type="button" class="btn primary" id="btnPgAuthorize" onclick="authorizePaymentSuccess()" style="width:100%; justify-content:center; padding:13px; font-size:14px; background:linear-gradient(135deg, #10b981, #059669); border:none;">
+            <span>✓ Authorize Sandbox Payment</span>
           </button>
           
-          <button type="button" class="btn light" onclick="authorizePaymentFailure('User cancelled payment authorization in UPI gateway (Error: U16)')" style="width:100%; justify-content:center; padding:10px; font-size:12.5px; color:var(--brand-rose); border-color:rgba(244,63,94,0.3);">
-            <span>✕ Simulate Payment Decline / Failure</span>
+          <button type="button" class="btn light" id="btnPgDecline" onclick="authorizePaymentFailure('User declined sandbox payment authorization')" style="width:100%; justify-content:center; padding:10px; font-size:12.5px; color:var(--brand-rose); border-color:rgba(244,63,94,0.3);">
+            <span>✕ Decline / Simulate Payment Failure</span>
           </button>
         </div>
       </div>
@@ -853,6 +885,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Scripts -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/booking.js"></script>
 </body>

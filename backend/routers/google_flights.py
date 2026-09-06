@@ -5,7 +5,7 @@ Provides 30-day historical Google Flights price benchmarks, price elasticity ins
 and UPI checkout verification.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
@@ -253,45 +253,24 @@ class CheckoutRequest(BaseModel):
     digiyatra_opted: Optional[bool] = False
     promo_code: Optional[str] = None
     promo_discount: Optional[int] = 0
+    payment_order_id: Optional[str] = None
 
+from backend.database import get_db_connection
 from backend.supabase_client import save_booking_to_supabase
 
 @router.post("/checkout")
 async def process_flight_checkout(req: CheckoutRequest):
     """
     Simulates secure payment gateway checkout and issues confirmed DGCA e-ticket & boarding pass
-    ONLY IF payment is completed and verified. Otherwise returns payment failure and allocates no seat.
+    ONLY IF payment order exists and is verified/captured in the central payment database.
+    Direct client confirmation without backend payment verification is strictly prohibited.
     """
-
-    effective_fare = req.total_fare if req.total_fare is not None else (req.base_price if req.base_price is not None else 5400)
-    effective_cabin = req.cabin or "Economy"
-    taxes = calculate_indian_flight_taxes(effective_fare, effective_cabin)
-    
-    addons_val = req.addons_total or 0
-    promo_disc = req.promo_discount or (500 if req.promo_code in ["AIRX500", "FESTIVE1000"] else 0)
-    pay_method = (req.payment_method or "UPI").upper()
-
-    final_amount = effective_fare + addons_val - promo_disc
-    if pay_method != "UPI":
-        final_amount += taxes["convenience_fee_card"]
-
-    flight_num = req.flight_no or "6E-205"
-    orig_code = req.origin_code or req.origin or "HYD"
-    dest_code = req.destination_code or req.destination or "DEL"
-    t_date = req.travel_date or req.depart_date or datetime.now().strftime("%Y-%m-%d")
-    p_name = req.passenger_name or "Rajesh Sharma"
-
-    # STRICT PAYMENT VALIDATION
-    status_str = (req.payment_status or "COMPLETED").upper()
-    is_verified = bool(req.payment_verified) if req.payment_verified is not None else True
-
-    if status_str in ["FAILED", "CANCELLED", "DECLINED", "REJECTED"] or not is_verified:
+    # If explicit client failure simulation was requested:
+    status_str = (req.payment_status or "").upper()
+    if status_str in ["FAILED", "CANCELLED", "DECLINED", "REJECTED"] or req.failure_reason:
+        pay_method = (req.payment_method or "UPI").upper()
         fail_code = "ERR_NPCI_DECLINED" if pay_method == "UPI" else "ERR_GATEWAY_DECLINED"
-        fail_msg = req.failure_reason or (
-            "Payment authorization was declined by issuing bank (NPCI Error U16). No fare has been charged."
-            if pay_method == "UPI"
-            else "Card authorization failed: 3D-Secure authentication not completed or cancelled."
-        )
+        fail_msg = req.failure_reason or "Payment authorization was declined by bank switch."
         return {
             "status": "FAILED",
             "payment_status": "FAILED",
@@ -301,16 +280,39 @@ async def process_flight_checkout(req: CheckoutRequest):
             "failure_reason": fail_msg,
             "transaction_id": f"TXN-FAIL-{random.randint(10000000, 99999999)}",
             "payment_method": pay_method,
-            "amount_attempted": final_amount,
-            "flight_no": flight_num,
-            "sector": f"{orig_code} ➔ {dest_code}",
-            "passenger_name": p_name,
+            "amount_attempted": req.total_fare or 5420,
+            "flight_no": req.flight_no or "6E-205",
+            "sector": f"{req.origin_code or 'HYD'} ➔ {req.destination_code or 'DEL'}",
+            "passenger_name": req.passenger_name or "Rajesh Sharma",
             "seat_allocated": False,
             "seat_number": None,
             "pnr": None,
             "eticket_number": None,
             "retry_allowed": True
         }
+
+    # STRICT ZERO-TRUST SECURITY:
+    # Disallow client-controlled payment verification.
+    # A valid payment_order_id must be provided and must be verified in the payments table.
+    if not req.payment_order_id:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Direct unverified checkout is disabled for security. Bookings require authoritative payment verification via /api/v1/payments/create-order and /verify."
+        )
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM payments WHERE order_id = ?", (req.payment_order_id,))
+    pay_row = cursor.fetchone()
+    conn.close()
+
+    if not pay_row or pay_row["status"] != "CAPTURED":
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Payment for this order has not been captured or verified by the payment gateway."
+        )
+
+    pay_method = (req.payment_method or "UPI").upper()
     pnr_suffix = f"{random.randint(1000, 9999)}"
     airline_code = flight_num.split('-')[0] if '-' in flight_num else (flight_num.split()[0] if ' ' in flight_num else "6E")
     pnr = f"{airline_code}-{pnr_suffix}"

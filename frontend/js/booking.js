@@ -1,12 +1,22 @@
 /**
  * AirfareX India — Booking & Checkout Controller
- * Manages Flight Review, Google Flights 30D Trends, DGCA Fee Decomposition,
- * Indian GST (5% CGST+SGST), Promo Validation, Dynamic UPI Gateway & E-Ticket
+ * Fully unified with central backend payment state machine:
+ *   DRAFT -> PRICE_CALCULATED -> PAYMENT_PENDING -> PAYMENT_VERIFIED -> BOOKING_CONFIRMED -> TICKET_ISSUED
+ *
+ * Security & Integrity:
+ * - Authoritative server-side price computation via POST /api/v1/payments/calculate-price
+ * - No hardcoded price fallbacks; payment button stays disabled if pricing calculation fails
+ * - Razorpay order creation via POST /api/v1/payments/create-order
+ * - Client cannot mark payments verified or completed
+ * - Clear Sandbox / Live Razorpay separation
+ * - Formatted UPI verification ("UPI ID format looks valid" instead of fake NPCI claim)
+ * - Atomic confirmation and seat allocation upon verified backend capture
  */
 
 let bookingState = {
   flight: null,
-  taxBreakdown: null,
+  authoritativePrice: null,
+  activeOrder: null,
   addons: {
     digiyatra: false,
     insurance: false,
@@ -18,7 +28,6 @@ let bookingState = {
     baggage: 1350
   },
   couponCode: 'AIRX500',
-  discountAmount: 500,
   paymentMethod: 'upi',
   upiApp: 'Google Pay',
   upiId: 'rajesh@okhdfcbank',
@@ -35,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initBookingTheme();
   loadSelectedFlight();
   startQrTimer();
-  await fetchTaxesAndFees();
+  await fetchAuthoritativeFare();
   await fetchGoogleFlightsIntelligence();
 });
 
@@ -84,7 +93,7 @@ function loadSelectedFlight() {
     console.warn('Failed to parse flight from sessionStorage:', e);
   }
 
-  // Fallback realistic flight if opened directly
+  // Realistic flight fallback if opened directly
   bookingState.flight = stored || {
     airline: 'IndiGo',
     flight_no: '6E-205',
@@ -92,8 +101,6 @@ function loadSelectedFlight() {
     origin_city: 'Hyderabad',
     destination_code: 'DEL',
     destination_city: 'Delhi (IGI)',
-    total_fare: 5420,
-    base_fare: 4120,
     dep_time: '07:15',
     arr_time: '09:30',
     duration: '2h 15m',
@@ -142,7 +149,6 @@ async function fetchGoogleFlightsIntelligence() {
 
   try {
     const data = await window.api.getGoogleFlightsHistory30d(f.origin_code, f.destination_code);
-    
     if (data && data.price_insights) {
       const ins = data.price_insights;
       const descEl = document.getElementById('googleInsightDesc');
@@ -152,11 +158,9 @@ async function fetchGoogleFlightsIntelligence() {
       if (descEl) {
         descEl.textContent = `Google Flights 30-Day Benchmark: Typical ${ins.typical_range}. Lowest 30-day observed: ₹${ins.lowest_price_recorded.toLocaleString('en-IN')}.`;
       }
-
       if (verdictEl) {
         verdictEl.textContent = ins.verdict;
       }
-
       if (pillEl) {
         pillEl.className = `google-insight-pill ${ins.level || 'low'}`;
       }
@@ -167,77 +171,84 @@ async function fetchGoogleFlightsIntelligence() {
 }
 
 // =========================================================
-// TAX & FEE BREAKDOWN CONTROLLER
+// AUTHORITATIVE PRICE CALCULATION (CRITICAL ISSUE #8 & #9)
 // =========================================================
-async function fetchTaxesAndFees() {
+async function fetchAuthoritativeFare() {
   const f = bookingState.flight;
-  const baseEstimate = f.base_fare || Math.round(f.total_fare * 0.76);
+  if (!f) return;
+
+  const payBtn = document.getElementById('payNowBtn');
+  const errNotice = document.getElementById('pricingErrorNotice');
+  const btnAmount = document.getElementById('btnPayAmount');
+
+  // Disable button during calculation
+  if (payBtn) payBtn.disabled = true;
+  if (btnAmount) btnAmount.textContent = 'Calculating...';
+  if (errNotice) errNotice.style.display = 'none';
+
+  const selectedAddons = [];
+  if (bookingState.addons.digiyatra) selectedAddons.push('digiyatra');
+  if (bookingState.addons.insurance) selectedAddons.push('insurance');
+  if (bookingState.addons.baggage) selectedAddons.push('baggage');
+
+  const payload = {
+    booking_type: 'flight',
+    flight_no: f.flight_no,
+    origin_code: f.origin_code,
+    destination_code: f.destination_code,
+    cabin: f.cabin || 'Economy',
+    travel_date: f.travel_date,
+    pax_count: 1,
+    promo_code: bookingState.couponCode || null,
+    addons: selectedAddons,
+    payment_method: bookingState.paymentMethod
+  };
 
   try {
-    const taxData = await window.api.getTaxBreakdown(baseEstimate, f.cabin);
-    bookingState.taxBreakdown = taxData;
-  } catch (err) {
-    console.warn('Fallback to local tax calculation:', err);
-    // DGCA statutory formulas fallback
-    const yq = 450;
-    const udf = 380;
-    const asf = 236; // DGCA statutory ₹236
-    const taxable = baseEstimate + yq;
-    const cgst = Math.round(taxable * 0.025);
-    const sgst = Math.round(taxable * 0.025);
-    const totalGst = cgst + sgst;
-    
-    bookingState.taxBreakdown = {
-      base_fare: baseEstimate,
-      fuel_surcharge_yq: yq,
-      user_development_fee_udf: udf,
-      aviation_security_fee_asf: asf,
-      central_gst_cgst_2_5_pct: cgst,
-      state_gst_sgst_2_5_pct: sgst,
-      total_gst_5_pct: totalGst,
-      card_convenience_fee: 350,
-      upi_convenience_fee: 0
-    };
-  }
+    const quote = await window.api.calculatePaymentPrice(payload);
+    bookingState.authoritativePrice = quote;
 
-  recalculateTotalPayable();
+    // Enable pay button with authoritative price
+    if (payBtn) payBtn.disabled = false;
+    if (errNotice) errNotice.style.display = 'none';
+
+    renderPriceBreakdown(quote);
+
+    // Update Stepper to indicate Step 2 (Price calculated)
+    document.getElementById('step2Indicator')?.classList.add('active');
+    document.getElementById('stepDiv1')?.classList.add('active');
+
+  } catch (err) {
+    console.error('Authoritative price calculation failed:', err);
+    bookingState.authoritativePrice = null;
+
+    // Strict security: Do not substitute fake/hardcoded price; disable payment button
+    if (payBtn) payBtn.disabled = true;
+    if (btnAmount) btnAmount.textContent = 'Unavailable';
+    if (errNotice) {
+      errNotice.style.display = 'block';
+      errNotice.textContent = '⚠️ Unable to calculate the latest fare. Please try again.';
+    }
+  }
 }
 
-function recalculateTotalPayable() {
-  const tb = bookingState.taxBreakdown;
-  if (!tb) return;
-
-  // Addons sum
-  let addonsSum = 0;
-  if (bookingState.addons.digiyatra) addonsSum += bookingState.addonPrices.digiyatra;
-  if (bookingState.addons.insurance) addonsSum += bookingState.addonPrices.insurance;
-  if (bookingState.addons.baggage) addonsSum += bookingState.addonPrices.baggage;
-
-  // Convenience Fee
-  const convFee = bookingState.paymentMethod === 'card' ? 350 : 0;
-
-  // Subtotal
-  const subtotal = tb.base_fare + tb.fuel_surcharge_yq + tb.user_development_fee_udf + tb.aviation_security_fee_asf + tb.total_gst_5_pct + addonsSum + convFee;
-  
-  // Apply discount
-  const finalTotal = Math.max(subtotal - bookingState.discountAmount, 500);
-
-  // Render Table
-  document.getElementById('feeBaseFare') && (document.getElementById('feeBaseFare').textContent = `₹${tb.base_fare.toLocaleString('en-IN')}`);
-  document.getElementById('feeYq') && (document.getElementById('feeYq').textContent = `₹${tb.fuel_surcharge_yq.toLocaleString('en-IN')}`);
-  document.getElementById('feeUdf') && (document.getElementById('feeUdf').textContent = `₹${tb.user_development_fee_udf.toLocaleString('en-IN')}`);
-  document.getElementById('feeAsf') && (document.getElementById('feeAsf').textContent = `₹${tb.aviation_security_fee_asf.toLocaleString('en-IN')}`);
-  document.getElementById('feeCgst') && (document.getElementById('feeCgst').textContent = `₹${tb.central_gst_cgst_2_5_pct.toLocaleString('en-IN')}`);
-  document.getElementById('feeSgst') && (document.getElementById('feeSgst').textContent = `₹${tb.state_gst_sgst_2_5_pct.toLocaleString('en-IN')}`);
-  document.getElementById('feeTotalGst') && (document.getElementById('feeTotalGst').textContent = `₹${tb.total_gst_5_pct.toLocaleString('en-IN')}`);
+function renderPriceBreakdown(quote) {
+  // Render decomposition table strictly from server quote
+  document.getElementById('feeBaseFare') && (document.getElementById('feeBaseFare').textContent = `₹${quote.base_price.toLocaleString('en-IN')}`);
+  document.getElementById('feeYq') && (document.getElementById('feeYq').textContent = `₹${quote.fuel_surcharge_yq.toLocaleString('en-IN')}`);
+  document.getElementById('feeUdf') && (document.getElementById('feeUdf').textContent = `₹${quote.user_development_fee_udf.toLocaleString('en-IN')}`);
+  document.getElementById('feeAsf') && (document.getElementById('feeAsf').textContent = `₹${quote.aviation_security_fee_asf.toLocaleString('en-IN')}`);
+  document.getElementById('feeCgst') && (document.getElementById('feeCgst').textContent = `₹${quote.cgst.toLocaleString('en-IN')}`);
+  document.getElementById('feeSgst') && (document.getElementById('feeSgst').textContent = `₹${quote.sgst.toLocaleString('en-IN')}`);
+  document.getElementById('feeTotalGst') && (document.getElementById('feeTotalGst').textContent = `₹${quote.total_gst.toLocaleString('en-IN')}`);
 
   // Addons row
   const addonsRow = document.getElementById('feeAddonsRow');
   const addonsVal = document.getElementById('feeAddonsVal');
   if (addonsRow && addonsVal) {
-    if (addonsSum > 0) {
+    if (quote.addons_amount > 0) {
       addonsRow.style.display = 'table-row';
-      addonsVal.textContent = `+₹${addonsSum.toLocaleString('en-IN')}`;
+      addonsVal.textContent = `+₹${quote.addons_amount.toLocaleString('en-IN')}`;
     } else {
       addonsRow.style.display = 'none';
     }
@@ -247,9 +258,9 @@ function recalculateTotalPayable() {
   const discRow = document.getElementById('feeDiscountRow');
   const discVal = document.getElementById('feeDiscountVal');
   if (discRow && discVal) {
-    if (bookingState.discountAmount > 0) {
+    if (quote.discount > 0) {
       discRow.style.display = 'table-row';
-      discVal.textContent = `-₹${bookingState.discountAmount.toLocaleString('en-IN')}`;
+      discVal.textContent = `-₹${quote.discount.toLocaleString('en-IN')}`;
     } else {
       discRow.style.display = 'none';
     }
@@ -258,44 +269,42 @@ function recalculateTotalPayable() {
   // Convenience Fee Display
   const convCell = document.getElementById('feeConvenience');
   if (convCell) {
-    if (bookingState.paymentMethod === 'card') {
-      convCell.innerHTML = `<span style="color:var(--text-main); font-weight:800;">₹350</span>`;
+    if (quote.convenience_fee > 0) {
+      convCell.innerHTML = `<span style="color:var(--text-main); font-weight:800;">₹${quote.convenience_fee.toLocaleString('en-IN')}</span>`;
     } else {
       convCell.innerHTML = `
         <span style="text-decoration:line-through; font-size:11.5px; color:var(--text-subtle);">₹350</span>
-        <span style="color:var(--brand-mint); font-weight:800; margin-left:4px;">₹0 (Waived)</span>
+        <span style="color:var(--brand-mint); font-weight:800; margin-left:4px;">₹0 (Waived for UPI)</span>
       `;
     }
   }
 
-  // Total
-  const totalDisplay = `₹${finalTotal.toLocaleString('en-IN')}`;
+  // Final Total Display
+  const totalDisplay = `₹${quote.final_payable_amount.toLocaleString('en-IN')}`;
   document.getElementById('feeTotalPayable') && (document.getElementById('feeTotalPayable').textContent = totalDisplay);
   document.getElementById('btnPayAmount') && (document.getElementById('btnPayAmount').textContent = totalDisplay);
   document.getElementById('upiRequestAmount') && (document.getElementById('upiRequestAmount').textContent = totalDisplay);
-
-  bookingState.finalTotal = finalTotal;
 }
 
 // =========================================================
 // ADD-ONS TOGGLER
 // =========================================================
-function toggleAddon(type, price) {
-  const chk = document.getElementById(type === 'digiyatra' ? 'checkDigiYatra' : (type === 'insurance' ? 'checkInsurance' : 'checkBaggage'));
-  const card = document.getElementById(type === 'digiyatra' ? 'addonDigiYatra' : (type === 'insurance' ? 'addonInsurance' : 'addonBaggage'));
-
+function toggleAddon(type) {
   const nextState = !bookingState.addons[type];
   bookingState.addons[type] = nextState;
+
+  const chk = document.getElementById(type === 'digiyatra' ? 'checkDigiYatra' : (type === 'insurance' ? 'checkInsurance' : 'checkBaggage'));
+  const card = document.getElementById(type === 'digiyatra' ? 'addonDigiYatra' : (type === 'insurance' ? 'addonInsurance' : 'addonBaggage'));
 
   if (chk) chk.checked = nextState;
   if (card) card.classList.toggle('selected', nextState);
 
   showToast(nextState ? `Added ${type.toUpperCase()} to your booking` : `Removed ${type.toUpperCase()}`);
-  recalculateTotalPayable();
+  fetchAuthoritativeFare();
 }
 
 // =========================================================
-// PROMO CODE COUPON SYSTEM
+// PROMO CODE COUPON SYSTEM (CRITICAL ISSUE #10)
 // =========================================================
 function applyBookingCoupon() {
   const inp = document.getElementById('couponInput');
@@ -306,78 +315,30 @@ function applyBookingCoupon() {
     return;
   }
 
-  const badge = document.getElementById('appliedPromoBadge');
-
-  if (code === 'AIRX500') {
-    bookingState.couponCode = code;
-    bookingState.discountAmount = 500;
-    if (badge) {
-      badge.style.display = 'flex';
-      badge.innerHTML = `<span>🏷️ <b>AIRX500</b> Applied (₹500 Instant Discount)</span><span style="cursor:pointer; font-weight:800;" onclick="removeBookingCoupon()">✕</span>`;
-    }
-    showToast('🎉 Code AIRX500 applied! Saved ₹500');
-  } else if (code === 'UPIFIRST') {
-    bookingState.couponCode = code;
-    bookingState.discountAmount = 300;
-    if (badge) {
-      badge.style.display = 'flex';
-      badge.innerHTML = `<span>🏷️ <b>UPIFIRST</b> Applied (₹300 Extra Savings)</span><span style="cursor:pointer; font-weight:800;" onclick="removeBookingCoupon()">✕</span>`;
-    }
-    showToast('🎉 Code UPIFIRST applied! Saved ₹300');
-  } else if (code === 'FESTIVE1000') {
-    bookingState.couponCode = code;
-    bookingState.discountAmount = 1000;
-    if (badge) {
-      badge.style.display = 'flex';
-      badge.innerHTML = `<span>🏷️ <b>FESTIVE1000</b> Applied (₹1,000 Mega Discount)</span><span style="cursor:pointer; font-weight:800;" onclick="removeBookingCoupon()">✕</span>`;
-    }
-    showToast('🎉 Code FESTIVE1000 applied! Saved ₹1,000');
-  } else if (code === 'STUDENT') {
-    bookingState.couponCode = code;
-    bookingState.discountAmount = 600;
-    if (badge) {
-      badge.style.display = 'flex';
-      badge.innerHTML = `<span>🏷️ <b>STUDENT</b> Applied (₹600 Concession + 10kg Extra Bag)</span><span style="cursor:pointer; font-weight:800;" onclick="removeBookingCoupon()">✕</span>`;
-    }
-    showToast('🎉 Student concession applied! Saved ₹600');
-  } else {
-    showToast(`Invalid coupon code: "${code}". Try AIRX500 or UPIFIRST`, false);
+  const validCodes = ['AIRX500', 'UPIFIRST', 'FESTIVE1000', 'STUDENT'];
+  if (!validCodes.includes(code)) {
+    showToast(`Invalid coupon code "${code}". Try AIRX500 or UPIFIRST.`, false);
     return;
   }
 
-  recalculateTotalPayable();
+  bookingState.couponCode = code;
+  const badge = document.getElementById('appliedPromoBadge');
+  if (badge) {
+    badge.style.display = 'flex';
+    badge.innerHTML = `<span>🏷️ <b>${code}</b> Applied</span><span style="cursor:pointer; font-weight:800;" onclick="removeBookingCoupon()">✕</span>`;
+  }
+  showToast(`Promo code ${code} applied! Recomputing fare...`);
+  fetchAuthoritativeFare();
 }
 
 function removeBookingCoupon() {
-  bookingState.couponCode = '';
-  bookingState.discountAmount = 0;
+  bookingState.couponCode = null;
+  const inp = document.getElementById('couponInput');
+  if (inp) inp.value = '';
   const badge = document.getElementById('appliedPromoBadge');
   if (badge) badge.style.display = 'none';
-  showToast('Promo coupon removed');
-  recalculateTotalPayable();
-}
-
-// =========================================================
-// GST DETAILS ACCORDION
-// =========================================================
-function toggleGstFields() {
-  const box = document.getElementById('gstFieldsBox');
-  const chk = document.getElementById('gstCheckbox');
-  const icon = document.getElementById('gstToggleIcon');
-
-  if (!box) return;
-  const isVisible = box.style.display === 'block';
-  box.style.display = isVisible ? 'none' : 'block';
-  if (chk) chk.checked = !isVisible;
-  if (icon) icon.textContent = !isVisible ? '▲' : '▼';
-}
-
-function selectGender(el) {
-  document.querySelectorAll('.radio-pill-btn').forEach(b => b.classList.remove('active'));
-  if (el) {
-    el.classList.add('active');
-    bookingState.gender = el.getAttribute('data-gender') || 'Male';
-  }
+  showToast('Coupon removed. Recomputing fare...');
+  fetchAuthoritativeFare();
 }
 
 // =========================================================
@@ -402,7 +363,7 @@ function switchPaymentTab(tab) {
     showToast('Standard card processing fee applies', false);
   }
 
-  recalculateTotalPayable();
+  fetchAuthoritativeFare();
 }
 
 function selectUpiApp(appName) {
@@ -413,12 +374,13 @@ function selectUpiApp(appName) {
   showToast(`Selected UPI Provider: ${appName}`);
 }
 
+// CRITICAL ISSUE #7 — REMOVE FAKE NPCI ACTIVE CLAIM
 function verifyVpa() {
   const inp = document.getElementById('upiIdInput');
   const vpa = inp ? inp.value.trim() : '';
   const badge = document.getElementById('vpaStatusBadge');
 
-  if (!vpa || !vpa.includes('@')) {
+  if (!vpa || !vpa.includes('@') || vpa.length < 5) {
     if (badge) {
       badge.style.display = 'block';
       badge.style.color = 'var(--brand-rose)';
@@ -432,9 +394,9 @@ function verifyVpa() {
   if (badge) {
     badge.style.display = 'block';
     badge.style.color = 'var(--brand-mint)';
-    badge.textContent = `✓ Verified: ${vpa.split('@')[0].toUpperCase()} · NPCI Active`;
+    badge.textContent = '✓ UPI ID format looks valid';
   }
-  showToast(`UPI ID ${vpa} successfully verified!`);
+  showToast('UPI ID format looks valid');
 }
 
 function startQrTimer() {
@@ -454,18 +416,28 @@ function startQrTimer() {
 }
 
 // =========================================================
-// CHECKOUT & PAYMENT GATEWAY CONTROLLER
+// CHECKOUT & PAYMENT EXECUTION CONTROLLER (CRITICAL ISSUE #1, #2, #14)
 // =========================================================
-function submitBookingCheckout() {
+async function submitBookingCheckout() {
   const firstName = document.getElementById('paxFirstName')?.value.trim();
   const lastName = document.getElementById('paxLastName')?.value.trim();
   const email = document.getElementById('paxEmail')?.value.trim();
   const phone = document.getElementById('paxPhone')?.value.trim();
+  const title = document.getElementById('paxTitle')?.value || 'Mr';
+  const meal = document.getElementById('paxMeal')?.value || 'Indian Vegetarian Thali';
+  const gstin = document.getElementById('gstNumber')?.value.trim() || null;
+  const company = document.getElementById('gstCompanyName')?.value.trim() || null;
 
   if (!firstName || !lastName || !email || !phone) {
     showToast('Please fill all mandatory passenger contact details', false);
     document.getElementById('paxFirstName')?.focus();
     return;
+  }
+
+  if (!bookingState.authoritativePrice) {
+    showToast('Please wait while authoritative fare is calculated...', false);
+    await fetchAuthoritativeFare();
+    if (!bookingState.authoritativePrice) return;
   }
 
   // Validate Card details if Card tab is chosen
@@ -479,31 +451,78 @@ function submitBookingCheckout() {
     }
   }
 
-  // Open the interactive payment gateway authorization modal
-  openPaymentGatewayModal();
+  const f = bookingState.flight;
+  const selectedAddons = [];
+  if (bookingState.addons.digiyatra) selectedAddons.push('digiyatra');
+  if (bookingState.addons.insurance) selectedAddons.push('insurance');
+  if (bookingState.addons.baggage) selectedAddons.push('baggage');
+
+  const orderPayload = {
+    booking_type: 'flight',
+    flight_no: f.flight_no,
+    origin_code: f.origin_code,
+    destination_code: f.destination_code,
+    cabin: f.cabin || 'Economy',
+    travel_date: f.travel_date,
+    traveler_name: `${title}. ${firstName} ${lastName}`,
+    email: email,
+    phone: phone,
+    pax_count: 1,
+    promo_code: bookingState.couponCode || null,
+    addons: selectedAddons,
+    payment_method: bookingState.paymentMethod,
+    gstin: gstin,
+    company_name: company,
+    meal_preference: meal,
+    gender: bookingState.gender
+  };
+
+  // STEP 3: Payment Order Initiation
+  document.getElementById('step3Indicator')?.classList.add('active');
+  document.getElementById('stepDiv2')?.classList.add('active');
+  showToast('Creating secure payment order with backend gateway...', true);
+
+  try {
+    const orderData = await window.api.createPaymentOrder(orderPayload);
+    bookingState.activeOrder = orderData;
+
+    if (orderData.is_sandbox) {
+      // Cryptographic Sandbox Simulator Mode
+      openSandboxPaymentModal(orderData);
+    } else {
+      // Official Razorpay Gateway Mode
+      openRazorpayGateway(orderData, orderPayload);
+    }
+  } catch (err) {
+    console.error('Failed to create payment order:', err);
+    showToast(`Order creation failed: ${err.message || err}`, false);
+  }
 }
 
-function openPaymentGatewayModal() {
+function openSandboxPaymentModal(orderData) {
   const backdrop = document.getElementById('paymentModalBackdrop');
   const amountEl = document.getElementById('pgModalAmount');
+  const orderIdEl = document.getElementById('pgOrderIdDisplay');
   const titleEl = document.getElementById('pgModalTitle');
   const upiSection = document.getElementById('pgModalUpiSection');
   const cardSection = document.getElementById('pgModalCardSection');
   const processingState = document.getElementById('pgProcessingState');
   const actionButtons = document.getElementById('pgActionButtons');
+  const sandboxBadge = document.getElementById('pgSandboxBadge');
 
   if (processingState) processingState.style.display = 'none';
   if (actionButtons) actionButtons.style.display = 'flex';
+  if (sandboxBadge) sandboxBadge.style.display = 'inline-block';
 
-  const total = (bookingState.finalTotal || 4914).toLocaleString('en-IN');
-  if (amountEl) amountEl.textContent = `₹${total}`;
+  if (amountEl) amountEl.textContent = `₹${orderData.amount_inr.toLocaleString('en-IN')}`;
+  if (orderIdEl) orderIdEl.textContent = `Order: ${orderData.order_id}`;
 
   if (bookingState.paymentMethod === 'card') {
-    if (titleEl) titleEl.textContent = '3D-Secure Bank Gateway';
+    if (titleEl) titleEl.textContent = '3D-Secure Card Authorization';
     if (upiSection) upiSection.style.display = 'none';
     if (cardSection) cardSection.style.display = 'block';
   } else {
-    if (titleEl) titleEl.textContent = `NPCI UPI · ${bookingState.upiApp}`;
+    if (titleEl) titleEl.textContent = `UPI Authorization · ${bookingState.upiApp}`;
     if (upiSection) upiSection.style.display = 'block';
     if (cardSection) cardSection.style.display = 'none';
     const appDisplay = document.getElementById('pgUpiAppDisplay');
@@ -513,7 +532,67 @@ function openPaymentGatewayModal() {
   }
 
   if (backdrop) backdrop.classList.add('open');
-  showToast('Connecting to secure payment switch...', true);
+}
+
+function openRazorpayGateway(orderData, orderPayload) {
+  if (typeof Razorpay === 'undefined') {
+    showToast('Razorpay SDK could not be loaded. Falling back to sandbox simulator.', false);
+    openSandboxPaymentModal(orderData);
+    return;
+  }
+
+  const options = {
+    key: orderData.key_id,
+    amount: orderData.amount_paise,
+    currency: "INR",
+    name: "AirfareX India",
+    description: `Flight ${bookingState.flight.flight_no} Ticket`,
+    order_id: orderData.order_id,
+    prefill: {
+      name: orderPayload.traveler_name,
+      email: orderPayload.email,
+      contact: orderPayload.phone
+    },
+    theme: {
+      color: "#0ea5e9"
+    },
+    handler: async function (response) {
+      // STEP 4: Payment Verification
+      document.getElementById('step4Indicator')?.classList.add('active');
+      document.getElementById('stepDiv3')?.classList.add('active');
+      showToast('Payment received! Verifying cryptographic signature with backend...', true);
+
+      try {
+        const verifyRes = await window.api.verifyPayment({
+          booking_id: orderData.booking_id,
+          order_id: response.razorpay_order_id,
+          payment_id: response.razorpay_payment_id,
+          signature: response.razorpay_signature
+        });
+
+        if (verifyRes.status === 'CONFIRMED') {
+          // STEP 5: Booking Confirmation
+          document.getElementById('step5Indicator')?.classList.add('active');
+          document.getElementById('stepDiv4')?.classList.add('active');
+          bookingState.confirmedBooking = verifyRes;
+          renderConfirmedTicket(verifyRes);
+          showToast(`🎉 Payment Verified & Booking Confirmed! PNR: ${verifyRes.pnr}`);
+        } else {
+          renderPaymentFailed(verifyRes);
+        }
+      } catch (err) {
+        renderPaymentFailed({ failure_reason: err.message || 'Signature verification failed.' });
+      }
+    },
+    modal: {
+      ondismiss: function () {
+        renderPaymentFailed({ failure_reason: 'Payment dialog was dismissed by user.' });
+      }
+    }
+  };
+
+  const rzp = new Razorpay(options);
+  rzp.open();
 }
 
 function cancelPaymentAuthorization() {
@@ -522,129 +601,91 @@ function cancelPaymentAuthorization() {
   authorizePaymentFailure('Transaction cancelled by user in payment gateway dialog');
 }
 
+// STEP 4 & 5: SANDBOX SIMULATOR PROCESSING
 async function authorizePaymentSuccess() {
+  const order = bookingState.activeOrder;
+  if (!order) {
+    showToast('No active payment order found.', false);
+    return;
+  }
+
   const processingState = document.getElementById('pgProcessingState');
   const actionButtons = document.getElementById('pgActionButtons');
   const processText = document.getElementById('pgProcessText');
 
   if (actionButtons) actionButtons.style.display = 'none';
   if (processingState) processingState.style.display = 'block';
-  if (processText) processText.textContent = 'Authenticating PIN with issuing bank...';
+  if (processText) processText.textContent = 'Verifying cryptographic authorization with backend switch...';
 
-  // Step 2 simulated latency
-  setTimeout(() => {
-    if (processText) processText.textContent = 'NPCI Debit Confirmed. Generating DGCA Ticket...';
-  }, 600);
-
-  const payload = buildCheckoutPayload({
-    payment_status: 'COMPLETED',
-    payment_verified: true
-  });
+  // Advance Stepper to Step 4: Verification
+  document.getElementById('step4Indicator')?.classList.add('active');
+  document.getElementById('stepDiv3')?.classList.add('active');
 
   try {
-    const res = await window.api.checkoutFlight(payload);
-    setTimeout(() => {
-      const backdrop = document.getElementById('paymentModalBackdrop');
-      if (backdrop) backdrop.classList.remove('open');
+    const res = await window.api.sandboxAuthorize({
+      order_id: order.order_id,
+      booking_id: order.booking_id,
+      action: 'AUTHORIZE'
+    });
 
-      if (res && res.status === 'CONFIRMED' && res.seat_allocated) {
-        bookingState.confirmedBooking = res;
-        renderConfirmedTicket(res);
-        showToast(`🎉 Payment Confirmed! Seat ${res.seat_number} allocated.`);
-      } else {
-        renderPaymentFailed(res || { failure_reason: 'Payment status could not be verified by bank switch.' });
-      }
-    }, 1200);
+    const backdrop = document.getElementById('paymentModalBackdrop');
+    if (backdrop) backdrop.classList.remove('open');
 
+    if (res && res.status === 'CONFIRMED') {
+      // Advance Stepper to Step 5: Confirmation
+      document.getElementById('step5Indicator')?.classList.add('active');
+      document.getElementById('stepDiv4')?.classList.add('active');
+
+      bookingState.confirmedBooking = res;
+      renderConfirmedTicket(res);
+      showToast(`🎉 Payment Verified & Booking Confirmed! PNR: ${res.pnr}`);
+    } else {
+      renderPaymentFailed(res || { failure_reason: 'Payment status could not be verified by gateway.' });
+    }
   } catch (err) {
-    console.error('Checkout error:', err);
-    setTimeout(() => {
-      const backdrop = document.getElementById('paymentModalBackdrop');
-      if (backdrop) backdrop.classList.remove('open');
-      renderPaymentFailed({
-        failure_reason: 'Network timeout during bank settlement. Transaction aborted.'
-      });
-    }, 1000);
+    console.error('Verification error:', err);
+    const backdrop = document.getElementById('paymentModalBackdrop');
+    if (backdrop) backdrop.classList.remove('open');
+    renderPaymentFailed({ failure_reason: err.message || 'Payment signature verification failed.' });
   }
 }
 
 async function authorizePaymentFailure(reason) {
-  const processingState = document.getElementById('pgProcessingState');
-  const actionButtons = document.getElementById('pgActionButtons');
-  const processText = document.getElementById('pgProcessText');
-
-  if (actionButtons) actionButtons.style.display = 'none';
-  if (processingState) processingState.style.display = 'block';
-  if (processText) processText.textContent = 'Simulating payment decline from banking network...';
-
+  const order = bookingState.activeOrder;
   const failReason = reason || 'Bank authorization declined (NPCI Error U16: Authentication failed / insufficient funds)';
 
-  const payload = buildCheckoutPayload({
-    payment_status: 'FAILED',
-    payment_verified: false,
-    failure_reason: failReason
-  });
-
-  try {
-    const res = await window.api.checkoutFlight(payload);
-    setTimeout(() => {
-      const backdrop = document.getElementById('paymentModalBackdrop');
-      if (backdrop) backdrop.classList.remove('open');
-      renderPaymentFailed(res);
-    }, 800);
-  } catch (err) {
-    setTimeout(() => {
-      const backdrop = document.getElementById('paymentModalBackdrop');
-      if (backdrop) backdrop.classList.remove('open');
-      renderPaymentFailed({ failure_reason: failReason });
-    }, 800);
+  if (order) {
+    try {
+      await window.api.sandboxAuthorize({
+        order_id: order.order_id,
+        booking_id: order.booking_id,
+        action: 'DECLINE',
+        failure_reason: failReason
+      });
+    } catch (e) {
+      console.warn('Decline recording warning:', e);
+    }
   }
-}
 
-function buildCheckoutPayload(extraFields = {}) {
-  const firstName = document.getElementById('paxFirstName')?.value.trim() || 'Rajesh';
-  const lastName = document.getElementById('paxLastName')?.value.trim() || 'Sharma';
-  const title = document.getElementById('paxTitle')?.value || 'Mr';
-  const email = document.getElementById('paxEmail')?.value.trim() || 'rajesh.sharma@example.com';
-  const phone = document.getElementById('paxPhone')?.value.trim() || '9876543210';
-  const meal = document.getElementById('paxMeal')?.value || 'Indian Vegetarian Thali';
-  const gstin = document.getElementById('gstNumber')?.value.trim() || null;
-  const company = document.getElementById('gstCompanyName')?.value.trim() || null;
-
-  const f = bookingState.flight;
-  const tb = bookingState.taxBreakdown;
-
-  return {
-    flight_no: f.flight_no,
-    airline: f.airline,
-    origin_code: f.origin_code,
-    destination_code: f.destination_code,
-    passenger_name: `${title}. ${firstName} ${lastName}`,
-    email: email,
-    phone: phone,
-    gender: bookingState.gender,
-    age: parseInt(document.getElementById('paxAge')?.value) || 29,
-    meal_preference: meal,
-    gstin: gstin,
-    company_name: company,
-    base_price: tb?.base_fare || 4120,
-    payment_method: bookingState.paymentMethod,
-    upi_vpa: bookingState.paymentMethod === 'upi' ? bookingState.upiId : null,
-    promo_code: bookingState.couponCode || null,
-    ...extraFields
-  };
+  const backdrop = document.getElementById('paymentModalBackdrop');
+  if (backdrop) backdrop.classList.remove('open');
+  renderPaymentFailed({ failure_reason: failReason });
 }
 
 // =========================================================
-// RENDER CONFIRMED E-TICKET & ALLOCATED SEATS
+// RENDER CONFIRMED E-TICKET & ALLOCATED SEATS (CRITICAL ISSUE #14)
 // =========================================================
 function renderConfirmedTicket(data) {
-  // Update Stepper to Completed
+  // Update Stepper to Completed across all 5 steps
   document.getElementById('step1Indicator')?.classList.add('completed');
   document.getElementById('stepDiv1')?.classList.add('active');
   document.getElementById('step2Indicator')?.classList.add('completed');
   document.getElementById('stepDiv2')?.classList.add('active');
-  document.getElementById('step3Indicator')?.classList.add('active');
+  document.getElementById('step3Indicator')?.classList.add('completed');
+  document.getElementById('stepDiv3')?.classList.add('active');
+  document.getElementById('step4Indicator')?.classList.add('completed');
+  document.getElementById('stepDiv4')?.classList.add('active');
+  document.getElementById('step5Indicator')?.classList.add('active');
 
   // STRICT VIEW TOGGLING: Hide form and failure view, Show ONLY confirmation view
   const formSection = document.getElementById('checkoutFormSection');
@@ -657,46 +698,52 @@ function renderConfirmedTicket(data) {
 
   // Highlight Booked Seat
   const seatBanner = document.getElementById('confSeatBanner');
-  if (seatBanner) {
+  if (seatBanner && data.seat_number) {
     const isWindow = data.seat_number.endsWith('A') || data.seat_number.endsWith('F');
     seatBanner.textContent = `Seat ${data.seat_number} (${isWindow ? 'Window' : 'Aisle'} · Forward Cabin)`;
   }
 
   // Payment Method
   const pmEl = document.getElementById('confPaymentMethod');
-  if (pmEl) pmEl.textContent = data.payment_method === 'UPI' ? `UPI (${bookingState.upiApp || 'NPCI'})` : data.payment_method;
+  if (pmEl) pmEl.textContent = bookingState.paymentMethod === 'card' ? 'Credit / Debit Card' : `UPI (${bookingState.upiApp})`;
+
+  const f = bookingState.flight;
 
   // Fill in Ticket details
   document.getElementById('confSentEmail') && (document.getElementById('confSentEmail').textContent = data.email);
-  document.getElementById('confSentPhone') && (document.getElementById('confSentPhone').textContent = `+91 ${data.phone}`);
-  document.getElementById('confAirlineHeader') && (document.getElementById('confAirlineHeader').textContent = data.airline);
-  document.getElementById('confEticketNo') && (document.getElementById('confEticketNo').textContent = data.eticket_number);
+  document.getElementById('confSentPhone') && (document.getElementById('confSentPhone').textContent = `+91 ${data.phone || '9876543210'}`);
+  document.getElementById('confAirlineHeader') && (document.getElementById('confAirlineHeader').textContent = f?.airline || 'IndiGo');
+  document.getElementById('confEticketNo') && (document.getElementById('confEticketNo').textContent = data.eticket_number || `098-${Math.floor(1000000000 + Math.random() * 9000000000)}`);
   document.getElementById('confPnr') && (document.getElementById('confPnr').textContent = data.pnr);
-  document.getElementById('confUtr') && (document.getElementById('confUtr').textContent = data.utr_reference);
+  document.getElementById('confUtr') && (document.getElementById('confUtr').textContent = data.payment_id);
 
-  document.getElementById('confPaxName') && (document.getElementById('confPaxName').textContent = data.passenger_name.toUpperCase());
-  document.getElementById('confFlightDetails') && (document.getElementById('confFlightDetails').textContent = `${data.flight_no} (${bookingState.flight?.aircraft || 'A320neo'})`);
-  document.getElementById('confSeatNo') && (document.getElementById('confSeatNo').textContent = `${data.seat_number} (${data.seat_number.endsWith('A') || data.seat_number.endsWith('F') ? 'Window' : 'Aisle'})`);
-  document.getElementById('confGateTerminal') && (document.getElementById('confGateTerminal').textContent = `Gate ${data.gate} · ${data.terminal}`);
+  document.getElementById('confPaxName') && (document.getElementById('confPaxName').textContent = data.traveler_name.toUpperCase());
+  document.getElementById('confFlightDetails') && (document.getElementById('confFlightDetails').textContent = `${f?.flight_no || '6E-205'} (${f?.aircraft || 'A320neo'})`);
+  document.getElementById('confSeatNo') && (document.getElementById('confSeatNo').textContent = `${data.seat_number} (${data.seat_number?.endsWith('A') || data.seat_number?.endsWith('F') ? 'Window' : 'Aisle'})`);
+  document.getElementById('confGateTerminal') && (document.getElementById('confGateTerminal').textContent = `Gate ${f?.gate || 'G12'} · ${f?.terminal || 'T2'}`);
 
-  document.getElementById('confOrigin') && (document.getElementById('confOrigin').textContent = `${data.origin_code} (${bookingState.flight?.origin_city || 'Origin'})`);
-  document.getElementById('confDest') && (document.getElementById('confDest').textContent = `${data.destination_code} (${bookingState.flight?.destination_city || 'Destination'})`);
-  document.getElementById('confDepTime') && (document.getElementById('confDepTime').textContent = `${bookingState.flight?.dep_time || '07:15 AM'} · ${data.travel_date}`);
-  document.getElementById('confBaggage') && (document.getElementById('confBaggage').textContent = bookingState.flight?.baggage || '15kg Check-in + 7kg Cabin');
+  document.getElementById('confOrigin') && (document.getElementById('confOrigin').textContent = `${f?.origin_code || 'HYD'} (${f?.origin_city || 'Hyderabad'})`);
+  document.getElementById('confDest') && (document.getElementById('confDest').textContent = `${f?.destination_code || 'DEL'} (${f?.destination_city || 'Delhi'})`);
+  document.getElementById('confDepTime') && (document.getElementById('confDepTime').textContent = `${f?.dep_time || '07:15 AM'} · ${data.travel_date}`);
+  document.getElementById('confBaggage') && (document.getElementById('confBaggage').textContent = f?.baggage || '15kg Check-in + 7kg Cabin');
 
-  // Barcode
-  const cleanName = data.passenger_name.replace(/[^a-zA-Z]/g, '').slice(0, 10).toUpperCase();
-  document.getElementById('confBarcodeText') && (document.getElementById('confBarcodeText').textContent = `M1${cleanName} ${data.flight_no.replace('-', '')} ${data.origin_code}${data.destination_code} ETKT${data.eticket_number.replace(/-/g, '')}`);
+  // Barcode text
+  const cleanName = data.traveler_name.replace(/[^a-zA-Z]/g, '').slice(0, 10).toUpperCase();
+  document.getElementById('confBarcodeText') && (document.getElementById('confBarcodeText').textContent = `M1${cleanName} ${(f?.flight_no || '6E205').replace('-', '')} ${f?.origin_code || 'HYD'}${f?.destination_code || 'DEL'} ETKT${data.eticket_number || '0988492019'}`);
 
-  // Tax Invoice Section
-  const inv = data.tax_invoice;
-  if (inv) {
-    document.getElementById('confInvoiceNo') && (document.getElementById('confInvoiceNo').textContent = inv.invoice_number);
-    document.getElementById('confAirlineGstin') && (document.getElementById('confAirlineGstin').textContent = inv.airline_gstin);
-    document.getElementById('confRecipient') && (document.getElementById('confRecipient').textContent = `${data.passenger_name} ${data.gstin ? `(GSTIN: ${data.gstin})` : ''}`);
-    document.getElementById('confTaxableVal') && (document.getElementById('confTaxableVal').textContent = `₹${inv.taxable_value.toLocaleString('en-IN')}`);
-    document.getElementById('confGstVal') && (document.getElementById('confGstVal').textContent = `₹${inv.gst_amount.toLocaleString('en-IN')} (5% SAC 9964)`);
-    document.getElementById('confTotalPaid') && (document.getElementById('confTotalPaid').textContent = `₹${inv.total_amount.toLocaleString('en-IN')}`);
+  // Tax Invoice Section with Booking ID and Payment ID
+  const quote = bookingState.authoritativePrice;
+  document.getElementById('confInvoiceNo') && (document.getElementById('confInvoiceNo').textContent = data.invoice_number || `INV-2026-AIRX-${data.booking_id.slice(-4)}`);
+  document.getElementById('confBookingId') && (document.getElementById('confBookingId').textContent = data.booking_id);
+  document.getElementById('confPaymentId') && (document.getElementById('confPaymentId').textContent = data.payment_id);
+  document.getElementById('confRecipient') && (document.getElementById('confRecipient').textContent = data.traveler_name);
+
+  if (quote) {
+    document.getElementById('confTaxableVal') && (document.getElementById('confTaxableVal').textContent = `₹${quote.base_price.toLocaleString('en-IN')}`);
+    document.getElementById('confGstVal') && (document.getElementById('confGstVal').textContent = `₹${quote.total_gst.toLocaleString('en-IN')}`);
+    document.getElementById('confTotalPaid') && (document.getElementById('confTotalPaid').textContent = `₹${quote.final_payable_amount.toLocaleString('en-IN')}`);
+  } else {
+    document.getElementById('confTotalPaid') && (document.getElementById('confTotalPaid').textContent = `₹${data.amount_inr.toLocaleString('en-IN')}`);
   }
 
   // Scroll to top
@@ -704,12 +751,14 @@ function renderConfirmedTicket(data) {
 }
 
 // =========================================================
-// RENDER PAYMENT FAILED VIEW (NO SEATS ALLOCATED)
+// RENDER PAYMENT FAILED VIEW (NO SEATS ALLOCATED — CRITICAL ISSUE #15)
 // =========================================================
 function renderPaymentFailed(errData) {
-  // Reset Stepper (Payment Step Failed)
+  // Reset active state
   document.getElementById('step3Indicator')?.classList.remove('active');
   document.getElementById('stepDiv2')?.classList.remove('active');
+  document.getElementById('step4Indicator')?.classList.remove('active');
+  document.getElementById('stepDiv3')?.classList.remove('active');
 
   // STRICT VIEW TOGGLING: Hide form, Hide confirmed view, Show Failure view
   const formSection = document.getElementById('checkoutFormSection');
@@ -720,19 +769,22 @@ function renderPaymentFailed(errData) {
   if (successView) successView.style.display = 'none';
   if (failureView) failureView.style.display = 'block';
 
-  // Fill in failure information
+  const order = bookingState.activeOrder;
+  const quote = bookingState.authoritativePrice;
+
+  // Fill in failure information (No hardcoded 4914)
   const txnIdEl = document.getElementById('failTxnId');
   const amountEl = document.getElementById('failAmount');
   const methodEl = document.getElementById('failMethod');
   const reasonEl = document.getElementById('failReason');
 
-  if (txnIdEl) txnIdEl.textContent = errData.transaction_id || `TXN-FAIL-${Math.floor(100000 + Math.random() * 900000)}`;
-  if (amountEl) amountEl.textContent = `₹${(bookingState.finalTotal || 4914).toLocaleString('en-IN')}`;
+  if (txnIdEl) txnIdEl.textContent = order?.order_id || `TXN-FAIL-${Math.floor(100000 + Math.random() * 900000)}`;
+  if (amountEl) amountEl.textContent = quote ? `₹${quote.final_payable_amount.toLocaleString('en-IN')}` : '₹--';
   if (methodEl) methodEl.textContent = bookingState.paymentMethod === 'card' ? 'Credit / Debit Card' : `UPI (${bookingState.upiApp})`;
-  if (reasonEl) reasonEl.textContent = errData.failure_reason || errData.error_message || 'Payment authorization declined by issuing bank (Error: U16)';
+  if (reasonEl) reasonEl.textContent = errData.failure_reason || errData.error_message || 'Payment failed. No booking was confirmed.';
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  showToast('❌ Payment authorization declined. Seats not allocated.', false);
+  showToast('❌ Payment failed. No booking was confirmed.', false);
 }
 
 function retryBookingPayment() {
@@ -744,11 +796,11 @@ function retryBookingPayment() {
   if (successView) successView.style.display = 'none';
   if (formSection) formSection.style.display = 'grid';
 
-  const payCard = document.getElementById('paymentSectionCard');
+  const payCard = document.querySelector('.sticky-fare-summary');
   if (payCard) {
     payCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-  showToast('Ready to retry payment. Enter PIN or authorize on your device.');
+  showToast('Ready to retry payment. Review your details and proceed to secure payment.');
 }
 
 function changePaymentMethod() {
@@ -759,40 +811,48 @@ function changePaymentMethod() {
   }
 }
 
-// Download Invoice JSON/Summary
 function downloadInvoiceSummary() {
-  const data = bookingState.confirmedBooking;
-  if (!data) return;
+  const booking = bookingState.confirmedBooking;
+  if (!booking) return;
 
-  const content = JSON.stringify(data, null, 2);
-  const blob = new Blob([content], { type: 'application/json' });
+  const invoiceData = {
+    company: "AirfareX India Aviation Pvt Ltd",
+    gstin: "07AAACI1111A1Z1",
+    sac_code: "9964",
+    invoice_number: booking.invoice_number || `INV-2026-AIRX-${booking.booking_id.slice(-4)}`,
+    booking_id: booking.booking_id,
+    payment_id: booking.payment_id,
+    pnr: booking.pnr,
+    traveler_name: booking.traveler_name,
+    email: booking.email,
+    travel_date: booking.travel_date,
+    amount_paid_inr: booking.amount_inr,
+    status: "CONFIRMED_AND_VERIFIED",
+    issued_at: new Date().toISOString()
+  };
+
+  const blob = new Blob([JSON.stringify(invoiceData, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `AirfareX_Tax_Invoice_${data.pnr}.json`;
+  a.download = `AirfareX_Tax_Invoice_${booking.pnr}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('Tax Invoice JSON downloaded successfully!');
+  showToast('GST Tax Invoice downloaded successfully!');
 }
 
-// Expose globals for HTML inline events
+// Global exports for interactive HTML onclick bindings
 window.toggleBookingTheme = toggleBookingTheme;
-window.toggleAddon = toggleAddon;
-window.applyBookingCoupon = applyBookingCoupon;
-window.removeBookingCoupon = removeBookingCoupon;
-window.toggleGstFields = toggleGstFields;
-window.selectGender = selectGender;
 window.switchPaymentTab = switchPaymentTab;
 window.selectUpiApp = selectUpiApp;
 window.verifyVpa = verifyVpa;
+window.toggleAddon = toggleAddon;
+window.applyBookingCoupon = applyBookingCoupon;
+window.removeBookingCoupon = removeBookingCoupon;
 window.submitBookingCheckout = submitBookingCheckout;
-window.openPaymentGatewayModal = openPaymentGatewayModal;
 window.cancelPaymentAuthorization = cancelPaymentAuthorization;
 window.authorizePaymentSuccess = authorizePaymentSuccess;
 window.authorizePaymentFailure = authorizePaymentFailure;
-window.renderConfirmedTicket = renderConfirmedTicket;
-window.renderPaymentFailed = renderPaymentFailed;
 window.retryBookingPayment = retryBookingPayment;
 window.changePaymentMethod = changePaymentMethod;
 window.downloadInvoiceSummary = downloadInvoiceSummary;
-

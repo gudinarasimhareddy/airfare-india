@@ -1924,6 +1924,418 @@
   font-weight: 800;
 }
 
+/* =========================================================
+   CUSTOMER-FIRST TRAVEL REDESIGN COMPONENTS (Issues #1 - #26)
+   ========================================================= */
+
+/* Top Banner Custom Styling */
+.sys-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sys-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.banner-sep {
+  opacity: 0.4;
+}
+.admin-portal-link {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-pill);
+  color: var(--brand-cyan);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.admin-portal-link:hover {
+  background: rgba(14, 165, 233, 0.25);
+  border-color: var(--brand-cyan);
+  color: #ffffff;
+}
+.nav-admin-link {
+  color: var(--brand-cyan) !important;
+  border: 1px dashed rgba(6, 182, 212, 0.35) !important;
+  margin-left: 6px;
+}
+
+/* Trip Type Selector Bar */
+.search-card-container {
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+.trip-type-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.trip-tab {
+  background: rgba(10, 18, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(10px);
+  color: #cbd5e1;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.trip-tab:hover {
+  color: #ffffff;
+  border-color: var(--brand-blue);
+  background: rgba(14, 165, 233, 0.18);
+}
+.trip-tab.active {
+  background: var(--brand-blue);
+  color: #ffffff;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 14px rgba(14, 165, 233, 0.4);
+}
+
+/* Search Bar Actions & Airport Swap */
+.airport-swap-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--brand-cyan);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: 4px;
+}
+.airport-swap-btn:hover {
+  transform: rotate(180deg) scale(1.1);
+  border-color: var(--brand-cyan);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.35);
+}
+.search-actions-col {
+  display: flex;
+  align-items: flex-end;
+}
+.search-cta-btn {
+  height: 44px;
+  padding: 0 24px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* Customer Trust Signals Strip */
+.trust-signals-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  margin-top: 14px;
+  background: rgba(10, 18, 38, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: #cbd5e1;
+}
+.trust-signal-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.trust-icon {
+  font-size: 14px;
+  color: var(--brand-mint);
+}
+
+/* =========================================================
+   AI RECOMMENDATION HERO CARD ("AI PICK") (Issue #3 & #7)
+   ========================================================= */
+.ai-recommendation-hero-card {
+  background: linear-gradient(135deg, rgba(14, 21, 52, 0.95) 0%, rgba(20, 30, 70, 0.95) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 0 30px rgba(16, 185, 129, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+.ai-recommendation-hero-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  bottom: 0;
+  background: linear-gradient(to bottom, var(--brand-mint), var(--brand-cyan));
+}
+.ai-pick-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.ai-pick-tag {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ai-robot-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid var(--brand-mint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.3);
+}
+.ai-pick-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--brand-mint);
+}
+.ai-pick-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 2px 0 0;
+}
+.ai-pick-price-box {
+  text-align: right;
+}
+.ai-pick-fare-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  display: block;
+}
+.ai-pick-fare {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--brand-mint);
+  letter-spacing: -0.5px;
+}
+.ai-pick-tagline {
+  font-size: 11px;
+  color: #94a3b8;
+  display: block;
+}
+
+/* Reasons Grid */
+.ai-reasons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  margin-bottom: 18px;
+}
+.ai-reason-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+.ai-reason-item .check-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--brand-mint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+/* AI Pick Footer */
+.ai-pick-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.ai-comparison-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ai-compare-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.ai-compare-chip:hover {
+  background: rgba(14, 165, 233, 0.2);
+  color: #ffffff;
+  border-color: var(--brand-blue);
+}
+.ai-compare-chip.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--brand-mint);
+  border-color: var(--brand-mint);
+}
+
+/* =========================================================
+   CUSTOMER TRAVEL HIGHLIGHTS GRID (Issue #5)
+   ========================================================= */
+.customer-kpi-grid {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+.travel-stat-card {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 22px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  transition: transform var(--transition-smooth), border-color var(--transition-fast);
+}
+.travel-stat-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+}
+.travel-stat-icon {
+  font-size: 26px;
+  margin-bottom: 8px;
+}
+
+/* =========================================================
+   ADMIN PORTAL CONSOLE (Issue #4 & #23)
+   ========================================================= */
+.admin-portal-head {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+.admin-subnav-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+.admin-subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.admin-subtab-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-main);
+  border-color: var(--brand-blue);
+}
+.admin-subtab-btn.active {
+  background: var(--brand-blue);
+  color: #ffffff;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 16px rgba(14, 165, 233, 0.4);
+}
+.admin-subview {
+  animation: fadeIn 0.25s ease;
+}
+
+/* =========================================================
+   RESPONSIVE MOBILE BREAKPOINTS (Issue #20)
+   ========================================================= */
+@media (max-width: 900px) {
+  .search-bar {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .search-actions-col {
+    grid-column: 1 / -1;
+  }
+  .search-cta-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .header-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .main-nav {
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .ai-pick-header {
+    flex-direction: column;
+  }
+  .ai-pick-price-box {
+    text-align: left;
+  }
+}
+
+@media (max-width: 600px) {
+  .search-bar {
+    grid-template-columns: 1fr;
+  }
+  .trust-signals-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .airport-swap-btn {
+    display: none;
+  }
+  .hero-content {
+    padding: 24px 18px;
+  }
+  .hero-content h1 {
+    font-size: 28px;
+  }
+}
+
 
 
 

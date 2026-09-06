@@ -109,7 +109,23 @@ CREATE TABLE IF NOT EXISTS public.refunds (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. TOURIST PLANS TABLE
+-- 6. PAYMENTS AUDIT TABLE
+CREATE TABLE IF NOT EXISTS public.payments (
+    id BIGSERIAL PRIMARY KEY,
+    order_id VARCHAR(60) UNIQUE NOT NULL,
+    booking_id VARCHAR(60) NOT NULL,
+    payment_id VARCHAR(60),
+    amount INTEGER NOT NULL,
+    currency VARCHAR(10) DEFAULT 'INR',
+    status VARCHAR(30) NOT NULL DEFAULT 'CREATED',
+    signature TEXT,
+    error_code TEXT,
+    error_description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. TOURIST PLANS TABLE
 CREATE TABLE IF NOT EXISTS public.tourist_plans (
     id TEXT PRIMARY KEY,
     destination TEXT NOT NULL,
@@ -137,25 +153,39 @@ ALTER TABLE public.flights ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refunds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tourist_plans ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to flight explorer, routes, and tourist plans
+-- 1. Catalog Read Policies (Publicly readable for search & exploration)
 CREATE POLICY "Allow public read access to flights" ON public.flights FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on flights" ON public.flights FOR INSERT WITH CHECK (true);
-
 CREATE POLICY "Allow public read access to routes" ON public.routes FOR SELECT USING (true);
 CREATE POLICY "Allow public read access to tourist_plans" ON public.tourist_plans FOR SELECT USING (true);
 
--- Allow public access to create & read bookings and alerts
-CREATE POLICY "Allow public read access to bookings" ON public.bookings FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on bookings" ON public.bookings FOR INSERT WITH CHECK (true);
+-- 2. Secure RLS for Sensitive Customer Data (Bookings, Payments, Refunds)
+-- Prevent public unauthorized reading and arbitrary tampering.
+-- Inserts & Updates are strictly restricted to the authenticated backend service_role.
+CREATE POLICY "Service role full access on bookings" ON public.bookings 
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow public read access to alerts" ON public.alerts FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on alerts" ON public.alerts FOR INSERT WITH CHECK (true);
+CREATE POLICY "Service role full access on payments" ON public.payments 
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow public read access to refunds" ON public.refunds FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on refunds" ON public.refunds FOR INSERT WITH CHECK (true);
+CREATE POLICY "Service role full access on refunds" ON public.refunds 
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "Service role full access on alerts" ON public.alerts 
+    FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Allow public read access to specific booking only when querying by matching PNR
+CREATE POLICY "Allow individual PNR lookup on bookings" ON public.bookings
+    FOR SELECT TO anon, authenticated
+    USING (pnr = current_setting('request.jwt.claim.pnr', true));
+
+-- Allow public read access to individual refund status by matching PNR
+CREATE POLICY "Allow individual PNR lookup on refunds" ON public.refunds
+    FOR SELECT TO anon, authenticated
+    USING (pnr = current_setting('request.jwt.claim.pnr', true));
 
 -- Seed initial flight sectors
 INSERT INTO public.routes (route_code, origin, destination, index_value, change_30d, avg_fare, volatility_score, status)
