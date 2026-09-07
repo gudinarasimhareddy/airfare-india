@@ -229,7 +229,7 @@ function searchDestination(code, fullName) {
 
 // Admin Portal Subtab Switcher
 function switchAdminPortalTab(subId, btn) {
-  const subtabs = ['routes', 'index', 'quality'];
+  const subtabs = ['routes', 'index', 'quality', 'ai-metrics'];
   subtabs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', id !== subId);
@@ -240,13 +240,14 @@ function switchAdminPortalTab(subId, btn) {
   if (subId === 'routes') loadRoutes();
   if (subId === 'index') loadIndexData();
   if (subId === 'quality') loadQualityData();
+  if (subId === 'ai-metrics') renderAiAdvisorAdminMetrics();
 }
 
 // Navigation between customer & admin views
 function showTab(tabId, el, updateUrl = true) {
   let targetTab = tabId;
   let adminSubtab = null;
-  if (['routes', 'index', 'quality'].includes(tabId)) {
+  if (['routes', 'index', 'quality', 'ai-metrics'].includes(tabId)) {
     targetTab = 'admin';
     adminSubtab = tabId;
   }
@@ -799,12 +800,21 @@ function renderHomeFlightCards(flights, bestFare, searchEnvelope = null, aiRec =
     const punctScore = f.punctualityScore || f.onTimePercentage || 94;
     const comfScore = f.comfortScore || 88;
 
-    // Smart Badge
+    // Smart Badge & Personal Match Score (Phase 8.5)
     let badgeText = f.recommendation || (totFare <= (bestFare || 4500) ? 'Lowest Price' : (stops === 'Nonstop' ? 'Best Value' : 'Standard'));
     let badgeClass = 'best-value';
     if (badgeText.toLowerCase().includes('overall') || badgeText.toLowerCase().includes('pick')) badgeClass = 'airfarex-pick';
     else if (badgeText.toLowerCase().includes('lowest') || badgeText.toLowerCase().includes('price') || badgeText.toLowerCase().includes('cheapest')) badgeClass = 'cheapest';
     else if (badgeText.toLowerCase().includes('fastest') || badgeText.toLowerCase().includes('quick')) badgeClass = 'fastest';
+
+    let personalMatchBadgeHtml = '';
+    if (window.AirfareXAgent && typeof window.AirfareXAgent.calculatePersonalizedMatch === 'function') {
+      const matchRes = window.AirfareXAgent.calculatePersonalizedMatch(f);
+      const matchScore = matchRes.matchScore;
+      const matchClass = matchScore >= 85 ? 'high' : (matchScore >= 70 ? 'medium' : 'low');
+      const profileName = window.AirfareXAgent.activeProfile?.name?.split(' ')[0] || 'You';
+      personalMatchBadgeHtml = `<span class="personal-match-badge ${matchClass}" title="${matchRes.matchReason || 'Match for ' + profileName}">🎯 ${matchScore}% Match for ${profileName}</span>`;
+    }
 
     const initials = airline.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
 
@@ -823,6 +833,7 @@ function renderHomeFlightCards(flights, bestFare, searchEnvelope = null, aiRec =
             <div style="display:flex; align-items:center; gap:6px; margin-top:6px; flex-wrap:wrap;">
               <span class="smart-badge ${badgeClass}" style="font-size:10px; font-weight:800; padding:3px 8px; border-radius:4px; text-transform:uppercase;">${badgeText}</span>
               <span class="score-badge-indicator ${ratingClass}" title="Composite Weighted Score">⭐ ${overallScore}/100 — ${scoreRating}</span>
+              ${personalMatchBadgeHtml}
             </div>
           </div>
 
@@ -1371,13 +1382,22 @@ function renderFlightCards(flights, bestFare, searchEnvelope = null) {
     const punctScore = f.punctualityScore || f.onTimePercentage || 94;
     const comfScore = f.comfortScore || 88;
 
-    // Badges
+    // Badges & Personal Match Score (Phase 8.5)
     let badgeText = f.recommendation || (totFare <= (bestFare || 4500) ? 'Lowest Price' : (stops === 'Nonstop' ? 'Best Value' : 'Verified'));
     let badgeClass = 'best-value';
     if (badgeText.toLowerCase().includes('overall') || badgeText.toLowerCase().includes('pick')) badgeClass = 'airfarex-pick';
     else if (badgeText.toLowerCase().includes('lowest') || badgeText.toLowerCase().includes('price') || badgeText.toLowerCase().includes('cheapest')) badgeClass = 'cheapest';
     else if (badgeText.toLowerCase().includes('fastest') || badgeText.toLowerCase().includes('quick')) badgeClass = 'fastest';
     else if (badgeText.toLowerCase().includes('reliable')) badgeClass = 'airfarex-pick';
+
+    let personalMatchBadgeHtml = '';
+    if (window.AirfareXAgent && typeof window.AirfareXAgent.calculatePersonalizedMatch === 'function') {
+      const matchRes = window.AirfareXAgent.calculatePersonalizedMatch(f);
+      const matchScore = matchRes.matchScore;
+      const matchClass = matchScore >= 85 ? 'high' : (matchScore >= 70 ? 'medium' : 'low');
+      const profileName = window.AirfareXAgent.activeProfile?.name?.split(' ')[0] || 'You';
+      personalMatchBadgeHtml = `<span class="personal-match-badge ${matchClass}" title="${matchRes.matchReason || 'Match for ' + profileName}">🎯 ${matchScore}% Match for ${profileName}</span>`;
+    }
 
     const bagSubText = withBag ? 'incl. 15kg checked bag' : 'Taxes & fees included';
     const bagTagText = f.baggage || (f.bag_fee === 0 ? '🧳 7kg Cabin + 15kg Checked bag' : `🧳 Checked bag: +₹${f.bag_fee}`);
@@ -1395,6 +1415,7 @@ function renderFlightCards(flights, bestFare, searchEnvelope = null) {
             <div class="smart-badge-row" style="display:flex; align-items:center; gap:6px; margin-top:6px; flex-wrap:wrap;">
               <span class="smart-badge ${badgeClass}">${badgeText}</span>
               <span class="score-badge-indicator ${ratingClass}" title="Calculated Composite Score">⭐ ${overallScore}/100 — ${scoreRating}</span>
+              ${personalMatchBadgeHtml}
             </div>
           </div>
 
@@ -2542,70 +2563,75 @@ async function handleSendAiMessage(customText = null) {
   userMsgEl.textContent = text;
   chatBody.appendChild(userMsgEl);
 
-  // Append typing indicator
-  const typingEl = document.createElement('div');
-  typingEl.className = 'ai-typing-indicator';
-  typingEl.id = 'aiTypingIndicator';
-  typingEl.innerHTML = `
-    <div class="ai-typing-dot"></div>
-    <div class="ai-typing-dot"></div>
-    <div class="ai-typing-dot"></div>
-  `;
-  chatBody.appendChild(typingEl);
+  // Append live step ticker & typing indicator
+  const tickerEl = document.createElement('div');
+  tickerEl.className = 'ai-agent-step-ticker';
+  tickerEl.id = 'aiLiveTicker';
+  tickerEl.innerHTML = `<span>🧠 Understanding user intent & route context...</span>`;
+  chatBody.appendChild(tickerEl);
   chatBody.scrollTop = chatBody.scrollHeight;
 
   try {
-    const lang = window.i18n?.currentLang || 'en';
-    
-    // Build rich context for the Travel Copilot
-    const searchContext = {
-      currentTab: state.currentTab,
-      origin: document.getElementById('fFrom')?.value || document.getElementById('fromCity')?.value || 'DEL',
-      destination: document.getElementById('fTo')?.value || document.getElementById('toCity')?.value || 'BOM',
-      date: document.getElementById('departDate')?.value || null
-    };
-    const availableFlights = (state.flights || []).slice(0, 8);
-    const selectedFlight = state.selectedFlight;
-
     let res;
-    try {
-      res = await window.api.chatWithCopilot(
-        text,
-        searchContext,
-        availableFlights,
-        selectedFlight,
-        state.userPreferences,
-        lang
-      );
-    } catch (copilotErr) {
-      // Graceful legacy fallback
-      res = await window.api.chatWithAssistant(text, lang, { currentTab: state.currentTab });
-    }
-    
-    // Remove typing indicator
-    const curTyping = document.getElementById('aiTypingIndicator');
-    if (curTyping) curTyping.remove();
 
-    // Render markdown-like response
+    // Phase 8 & 8.5: If Local Agentic AI Advisor is available, execute autonomous agent pipeline
+    if (window.AirfareXAgent && typeof window.AirfareXAgent.processUserRequest === 'function') {
+      res = await window.AirfareXAgent.processUserRequest(text, (stepState) => {
+        if (tickerEl) {
+          tickerEl.innerHTML = `<span>${stepState.message || stepState.step}</span>`;
+          chatBody.scrollTop = chatBody.scrollHeight;
+        }
+      });
+    } else {
+      // Fallback to backend API
+      const lang = window.i18n?.currentLang || 'en';
+      const searchContext = {
+        currentTab: state.currentTab,
+        origin: document.getElementById('fFrom')?.value || document.getElementById('fromCity')?.value || 'DEL',
+        destination: document.getElementById('fTo')?.value || document.getElementById('toCity')?.value || 'BOM',
+        date: document.getElementById('departDate')?.value || null
+      };
+      const availableFlights = (state.flights || []).slice(0, 8);
+      const selectedFlight = state.selectedFlight;
+
+      try {
+        res = await window.api.chatWithCopilot(
+          text,
+          searchContext,
+          availableFlights,
+          selectedFlight,
+          state.userPreferences,
+          lang
+        );
+      } catch (copilotErr) {
+        res = await window.api.chatWithAssistant(text, lang, { currentTab: state.currentTab });
+      }
+    }
+
+    // Remove live ticker
+    if (tickerEl) tickerEl.remove();
+
+    // Create assistant message element
     const assistantMsgEl = document.createElement('div');
     assistantMsgEl.className = 'ai-msg assistant';
 
-    // 1. If Agentic Execution Trace is present, render expandable reasoning accordion
-    if (res.execution_trace && res.execution_trace.length) {
+    // 1. Render Agentic Execution Reasoning Accordion
+    const steps = res.steps || res.execution_trace;
+    if (steps && steps.length) {
       const traceBox = document.createElement('div');
       traceBox.className = 'agent-trace-box';
       traceBox.innerHTML = `
         <div class="agent-trace-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
-          <span>🧠 Agentic Execution Trace (${res.execution_trace.length} autonomous steps)</span>
+          <span>🧠 Autonomous Reasoning Trace (${steps.length} steps)</span>
           <span style="font-size:10px; opacity:0.8;">[Toggle ▼]</span>
         </div>
         <div class="agent-trace-steps">
-          ${res.execution_trace.map(step => `
+          ${steps.map(step => `
             <div class="agent-step-item">
-              <span class="trace-pill ${step.step_type}">${step.step_type}</span>
+              <span class="trace-pill ${step.step_type || step.tool || 'reasoning'}">${step.step_type || step.tool || 'STEP'}</span>
               <div>
-                <strong style="color:var(--text-main);">${step.title}:</strong>
-                <span style="color:var(--text-muted); margin-left:4px;">${step.detail}</span>
+                <strong style="color:var(--text-main);">${step.title || step.step || 'Step'}:</strong>
+                <span style="color:var(--text-muted); margin-left:4px;">${step.detail || step.details || ''}</span>
               </div>
             </div>
           `).join('')}
@@ -2614,7 +2640,7 @@ async function handleSendAiMessage(customText = null) {
       assistantMsgEl.appendChild(traceBox);
     }
 
-    // 2. Format markdown response content (handles both answer and reply)
+    // 2. Format markdown response content
     const rawText = res.answer || res.reply || "I am ready to help you plan your journey.";
     let formattedReply = rawText
       .replace(/^### (.*$)/gim, '<h3 style="margin:4px 0 8px; color:var(--brand-cyan); font-size:15px;">$1</h3>')
@@ -2629,78 +2655,121 @@ async function handleSendAiMessage(customText = null) {
     replyDiv.innerHTML = formattedReply;
     assistantMsgEl.appendChild(replyDiv);
 
+    // 3. If a flight was recommended, render a dual-score flight summary card
+    if (res.recommendedFlight) {
+      const rf = res.recommendedFlight;
+      const rfCard = document.createElement('div');
+      rfCard.className = 'ai-recommended-flight-card';
+      rfCard.style.cssText = 'background:rgba(14,165,233,0.06); border:1px solid rgba(14,165,233,0.3); border-radius:10px; padding:12px 14px; margin:10px 0;';
+      
+      const overall = rf.overallScore || 92;
+      const match = rf.personalMatchScore || (res.matchResult ? res.matchResult.matchScore : 95);
+      const matchRating = match >= 85 ? 'high' : (match >= 70 ? 'medium' : 'low');
+      const pName = window.AirfareXAgent?.activeProfile?.name?.split(' ')[0] || 'You';
+
+      rfCard.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <b style="font-size:14px; color:var(--text-main);">${rf.airline} ${rf.flightNumber || rf.flight_no}</b>
+              <span class="personal-match-badge ${matchRating}">🎯 ${match}% Match for ${pName}</span>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+              ${rf.departureTime || '07:15'} ➔ ${rf.arrivalTime || '09:30'} (${rf.duration || '2h 15m'}) · ${rf.stops || 'Nonstop'}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:18px; font-weight:800; color:var(--brand-mint);">₹${(rf.totalPrice || rf.total_fare || 4700).toLocaleString('en-IN')}</div>
+            <div style="font-size:10px; color:var(--text-muted);">AirfareX Score: ⭐ ${overall}/100</div>
+          </div>
+        </div>
+      `;
+      assistantMsgEl.appendChild(rfCard);
+    }
+
+    // 4. If booking created, render booking confirmation card
+    if (res.booking) {
+      const b = res.booking;
+      const bCard = document.createElement('div');
+      bCard.className = 'ai-booking-confirmation-card';
+      bCard.style.cssText = 'background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.35); border-radius:10px; padding:14px; margin:10px 0;';
+      bCard.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+          <div>
+            <div style="font-size:10px; font-weight:800; text-transform:uppercase; color:var(--brand-mint);">DEMO BOOKING REFERENCE</div>
+            <div style="font-size:18px; font-weight:900; font-family:'JetBrains Mono',monospace; color:#fff;">${b.bookingReference}</div>
+          </div>
+          <span class="badge green">✓ CONFIRMED</span>
+        </div>
+        <div style="font-size:12px; display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
+          <div><b>Traveler:</b> ${b.passengerName}</div>
+          <div><b>Flight:</b> ${b.flight?.airline} ${b.flight?.flightNumber}</div>
+          <div><b>Route:</b> ${b.flight?.origin} ➔ ${b.flight?.destination}</div>
+          <div><b>Fare:</b> ₹${(b.flight?.totalPrice || 4700).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="font-size:11px; color:var(--brand-mint);">
+          ${b.specialAssistanceNotes || '✓ Added to your local demo trips archive.'}
+        </div>
+      `;
+      assistantMsgEl.appendChild(bCard);
+    }
+
     // Attribution footer in bubble
     const attrDiv = document.createElement('div');
     attrDiv.style.cssText = 'margin-top:8px; font-size:10px; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.06); padding-top:4px; display:flex; justify-content:space-between;';
     attrDiv.innerHTML = `
-      <span>⚡ Powered by AirfareX Intelligence</span>
-      <span>Provider: ${res.provider || 'RULE_BASED'}</span>
+      <span>⚡ Powered by AirfareX Agentic Travel Advisor</span>
+      <span>Profile: ${window.AirfareXAgent?.activeProfile?.name || 'Customer'}</span>
     `;
     assistantMsgEl.appendChild(attrDiv);
 
-    // 3. Render interactive action buttons
+    // 5. Render interactive action buttons
+    const actionsWrap = document.createElement('div');
+    actionsWrap.className = 'ai-inline-actions';
+
+    if (res.recommendedFlight) {
+      const rf = res.recommendedFlight;
+      const bBtn = document.createElement('button');
+      bBtn.className = 'ai-action-chip';
+      bBtn.innerHTML = `✈️ Book ${rf.airline} ${rf.flightNumber || rf.flight_no} (₹${(rf.totalPrice || 4700).toLocaleString('en-IN')})`;
+      bBtn.onclick = () => {
+        selectFlight(rf.airline, rf.flightNumber || rf.flight_no, rf.totalPrice || rf.total_fare || 4700, rf.origin || 'DEL', rf.destination || 'BOM');
+        toggleAiAssistant();
+      };
+      actionsWrap.appendChild(bBtn);
+
+      const dBtn = document.createElement('button');
+      dBtn.className = 'ai-action-chip';
+      dBtn.innerHTML = `📋 View Full Breakdown`;
+      dBtn.onclick = () => {
+        openFlightDetailsModal(rf.flightNumber || rf.flight_no);
+      };
+      actionsWrap.appendChild(dBtn);
+    }
+
     if (res.action) {
-      const actionsWrap = document.createElement('div');
-      actionsWrap.className = 'ai-inline-actions';
-      
       if (res.action.type === 'open_tab') {
         const btn = document.createElement('button');
         btn.className = 'ai-action-chip';
-        const tabNames = {
-          'comparison': '⚖️ Open Airline Comparison',
-          'monthly-fares': '📅 Open Low-Fare Calendar',
-          'offers': '🏷️ View Discount Coupons',
-          'guide': '🧭 Open Travel Guide'
-        };
-        btn.innerHTML = tabNames[res.action.tab] || `Open ${res.action.tab}`;
+        btn.innerHTML = `Open ${res.action.tab}`;
         btn.onclick = () => {
-          showTab(res.action.tab, document.querySelector(`.main-nav a[data-tab="${res.action.tab}"]`));
-          if (res.action.tab === 'guide' && res.action.city) {
-            showCityDetail(res.action.city);
-          }
+          showTab(res.action.tab);
           toggleAiAssistant();
         };
         actionsWrap.appendChild(btn);
-      } else if (res.action.type === 'track_refund' && res.action.pnr) {
+      } else if (res.action.type === 'compare_flights') {
         const btn = document.createElement('button');
         btn.className = 'ai-action-chip';
-        btn.innerHTML = `🔍 View Refund for PNR ${res.action.pnr}`;
+        btn.innerHTML = `⚖️ Open Full Comparison`;
         btn.onclick = () => {
-          showTab('refunds', document.querySelector('.main-nav a[data-tab="refunds"]'));
-          trackRefundStatus(res.action.pnr);
-          toggleAiAssistant();
-        };
-        actionsWrap.appendChild(btn);
-      } else if (res.action.type === 'populate_search') {
-        const btn = document.createElement('button');
-        btn.className = 'ai-action-chip';
-        btn.innerHTML = `✈️ View ${res.action.origin} ➔ ${res.action.destination} Flights (₹${res.action.fare?.toLocaleString('en-IN')})`;
-        btn.onclick = () => {
-          const fFrom = document.getElementById('fFrom');
-          const fTo = document.getElementById('fTo');
-          if (fFrom) fFrom.value = res.action.origin;
-          if (fTo) fTo.value = res.action.destination;
-          showTab('explorer', document.querySelector('.main-nav a[data-tab="explorer"]'));
-          loadFlights();
-          toggleAiAssistant();
-        };
-        actionsWrap.appendChild(btn);
-      } else if (res.action.type === 'show_prediction') {
-        const btn = document.createElement('button');
-        btn.className = 'ai-action-chip';
-        btn.innerHTML = `🔮 Open ${res.action.origin} ➔ ${res.action.destination} Forecast`;
-        btn.onclick = () => {
-          const pFrom = document.getElementById('predFrom');
-          const pTo = document.getElementById('predTo');
-          if (pFrom) pFrom.value = res.action.origin;
-          if (pTo) pTo.value = res.action.destination;
-          showTab('prediction', document.querySelector('.main-nav a[data-tab="prediction"]'));
-          runPricePrediction();
+          showTab('comparison');
           toggleAiAssistant();
         };
         actionsWrap.appendChild(btn);
       }
-      
+    }
+
+    if (actionsWrap.children.length > 0) {
       assistantMsgEl.appendChild(actionsWrap);
     }
 
@@ -2716,17 +2785,21 @@ async function handleSendAiMessage(customText = null) {
       }
     }
 
+    // Refresh Admin metrics telemetry if open
+    renderAiAdvisorAdminMetrics();
+
     chatBody.scrollTop = chatBody.scrollHeight;
   } catch (err) {
-    const curTyping = document.getElementById('aiTypingIndicator');
-    if (curTyping) curTyping.remove();
+    console.error('AI chat error:', err);
+    if (tickerEl) tickerEl.remove();
 
     const errEl = document.createElement('div');
     errEl.className = 'ai-msg assistant';
-    errEl.innerHTML = `<p style="color:var(--brand-amber);">Sorry, I encountered an issue retrieving real-time data. Please try again or check your query.</p>`;
+    errEl.innerHTML = `<p style="color:var(--brand-amber);">Sorry, I encountered an issue executing your request. Please try again.</p>`;
     chatBody.appendChild(errEl);
     chatBody.scrollTop = chatBody.scrollHeight;
   }
+}
 }
 
 // =========================================================
@@ -4091,7 +4164,276 @@ if (typeof document !== 'undefined') {
   }
 }
 
-// Global window bindings for Phase 8 & 9 UX
+// =========================================================
+// PHASE 8.5: PERSONALIZED AI TRAVEL ADVISOR UI CONTROLLER
+// =========================================================
+
+function switchDemoProfile(profileId) {
+  if (!window.AirfareXAgent || typeof window.AirfareXAgent.setActiveProfile !== 'function') return;
+  const prof = window.AirfareXAgent.setActiveProfile(profileId);
+  if (!prof) return;
+
+  // Update profile switch buttons
+  document.querySelectorAll('.profile-chip-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.profile === profileId);
+  });
+
+  // Update hero profile badge and description
+  const heroBadge = document.getElementById('heroAdvisorProfileBadge');
+  if (heroBadge) heroBadge.textContent = `${prof.name} (${prof.persona})`;
+  const heroDesc = document.getElementById('heroAdvisorProfileDesc');
+  if (heroDesc) heroDesc.textContent = `Optimizing recommendations for ${prof.name}'s travel habits, budget (₹${prof.preferences.maxTypicalBudget}), and 10 past bookings.`;
+
+  // Update chat header active profile name
+  const chatProf = document.getElementById('chatActiveProfileName');
+  if (chatProf) chatProf.textContent = `${prof.name} (${prof.persona})`;
+
+  // Update modal persona badge
+  const modalBadge = document.getElementById('modalProfilePersonaBadge');
+  if (modalBadge) modalBadge.textContent = prof.persona;
+
+  // Update modal profile switcher buttons
+  ['DEMO-1001', 'DEMO-1002', 'DEMO-1003'].forEach(id => {
+    const btn = document.getElementById(`modalProfBtn_${id.replace('-', '_')}`);
+    if (btn) {
+      btn.className = id === profileId ? 'btn sm primary' : 'btn sm light';
+    }
+  });
+
+  // Synchronize modal inputs if open
+  loadUserPreferences();
+
+  // Re-render flight cards to instantly update "Your Match" scores
+  if (state.flights && state.flights.length) {
+    const bestFare = Math.min(...state.flights.map(f => f.totalPrice || f.total_fare || 4500));
+    renderFlightCards(state.flights, bestFare);
+  }
+  const fromCity = document.getElementById('fromCity')?.value || 'DEL';
+  const toCity = document.getElementById('toCity')?.value || 'BOM';
+  loadHomepageFeaturedFlights(extractAirportCode(fromCity), extractAirportCode(toCity));
+
+  // Refresh Admin metrics if open
+  renderAiAdvisorAdminMetrics();
+
+  showToast(`👤 Switched profile to ${prof.name} (${prof.persona}) · 10 past bookings loaded`);
+}
+
+function aiChangePriority(priority, btn) {
+  if (btn) {
+    document.querySelectorAll('.priority-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  if (window.AirfareXAgent && window.AirfareXAgent.activeProfile) {
+    window.AirfareXAgent.activeProfile.preferences.priority = priority;
+  }
+
+  // Re-render flight cards
+  if (state.flights && state.flights.length) {
+    const bestFare = Math.min(...state.flights.map(f => f.totalPrice || f.total_fare || 4500));
+    renderFlightCards(state.flights, bestFare);
+  }
+
+  showToast(`Priority adjusted to "${priority}". Personalized match recalculating...`);
+}
+
+function askHeroAdvisor() {
+  const input = document.getElementById('heroAdvisorInput');
+  const query = input?.value?.trim() || 'Find the best flight for my profile';
+  toggleAiAssistant();
+  handleSendAiMessage(query);
+}
+
+function toggleHistoryPreference(input) {
+  const useHist = input.checked;
+  if (window.AirfareXAgent && window.AirfareXAgent.activeProfile) {
+    window.AirfareXAgent.activeProfile.preferences.useHistory = useHist;
+  }
+  const explanation = document.getElementById('modalHistoryExplanation');
+  if (explanation) {
+    if (useHist) {
+      explanation.textContent = 'When enabled, the AI weights your past average spend, favorite airlines, and on-time sensitivity to find the best match.';
+      explanation.style.color = 'var(--text-muted)';
+    } else {
+      explanation.textContent = 'History ignored. AI scoring will strictly rely on your explicit priority and general flight benchmarks.';
+      explanation.style.color = 'var(--brand-rose)';
+    }
+  }
+
+  // Refresh flight card match scores
+  if (state.flights && state.flights.length) {
+    const bestFare = Math.min(...state.flights.map(f => f.totalPrice || f.total_fare || 4500));
+    renderFlightCards(state.flights, bestFare);
+  }
+
+  showToast(useHist ? '📊 Past booking history weighting enabled.' : '🔒 Privacy Mode: Past booking history ignored.');
+}
+
+function resetActiveProfilePreferences() {
+  if (window.AirfareXAgent && typeof window.AirfareXAgent.setActiveProfile === 'function') {
+    const curId = window.AirfareXAgent.activeProfile?.customerId || 'DEMO-1001';
+    window.AirfareXAgent.setActiveProfile(curId);
+    loadUserPreferences();
+    showToast('Preferences reset to profile defaults.');
+  }
+}
+
+function openPersonalizationModal() {
+  loadUserPreferences();
+  openModal('userPreferencesModal');
+}
+
+async function loadUserPreferences() {
+  if (!window.AirfareXAgent || !window.AirfareXAgent.activeProfile) return;
+  const p = window.AirfareXAgent.activeProfile;
+  const prefs = p.preferences || {};
+
+  const prefPriority = document.getElementById('prefPriority');
+  if (prefPriority) prefPriority.value = prefs.priority || 'value';
+
+  const prefTime = document.getElementById('prefTime');
+  if (prefTime) prefTime.value = prefs.preferredDeparture || 'any';
+
+  const prefAirline = document.getElementById('prefAirline');
+  if (prefAirline) prefAirline.value = prefs.preferredAirlines?.[0] || '';
+
+  const prefUseHistory = document.getElementById('prefUseHistory');
+  if (prefUseHistory) prefUseHistory.checked = prefs.useHistory !== false;
+
+  const prefWheelchair = document.getElementById('prefWheelchair');
+  if (prefWheelchair) prefWheelchair.checked = !!prefs.wheelchairAssistance;
+
+  const prefExtraLegroom = document.getElementById('prefExtraLegroom');
+  if (prefExtraLegroom) prefExtraLegroom.checked = !!prefs.extraLegroom;
+
+  const prefVegMeal = document.getElementById('prefVegMeal');
+  if (prefVegMeal) prefVegMeal.checked = !!prefs.specialMeal;
+
+  const prefAisleSeat = document.getElementById('prefAisleSeat');
+  if (prefAisleSeat) prefAisleSeat.checked = !!prefs.aisleSeat;
+
+  // Update modal persona badge
+  const modalBadge = document.getElementById('modalProfilePersonaBadge');
+  if (modalBadge) modalBadge.textContent = p.persona;
+}
+
+function handleSavePreferences(event) {
+  if (event) event.preventDefault();
+  if (!window.AirfareXAgent || !window.AirfareXAgent.activeProfile) return;
+
+  const p = window.AirfareXAgent.activeProfile;
+  p.preferences.priority = document.getElementById('prefPriority')?.value || 'value';
+  p.preferences.preferredDeparture = document.getElementById('prefTime')?.value || 'any';
+  
+  const selAir = document.getElementById('prefAirline')?.value;
+  p.preferences.preferredAirlines = selAir ? [selAir] : [];
+  p.preferences.useHistory = document.getElementById('prefUseHistory')?.checked !== false;
+  p.preferences.wheelchairAssistance = !!document.getElementById('prefWheelchair')?.checked;
+  p.preferences.extraLegroom = !!document.getElementById('prefExtraLegroom')?.checked;
+  p.preferences.specialMeal = !!document.getElementById('prefVegMeal')?.checked;
+  p.preferences.aisleSeat = !!document.getElementById('prefAisleSeat')?.checked;
+
+  closeModal('userPreferencesModal');
+  showToast('✓ Traveler scoring preferences updated & applied.');
+
+  // Refresh flight results with updated match scores
+  if (state.flights && state.flights.length) {
+    const bestFare = Math.min(...state.flights.map(f => f.totalPrice || f.total_fare || 4500));
+    renderFlightCards(state.flights, bestFare);
+  }
+}
+
+// Render AI Travel Advisor Session Telemetry in Admin Portal
+function renderAiAdvisorAdminMetrics() {
+  if (!window.AirfareXAgent) return;
+  const prof = window.AirfareXAgent.activeProfile;
+  if (!prof) return;
+
+  // 1. Update KPIs
+  const elProfile = document.getElementById('aiKpiProfile');
+  if (elProfile) elProfile.textContent = prof.name;
+  const elPersona = document.getElementById('aiKpiPersona');
+  if (elPersona) elPersona.textContent = `${prof.persona} (${prof.customerId})`;
+
+  const hist = prof.history || [];
+  const avgFare = Math.round(hist.reduce((s, t) => s + (t.fare || 0), 0) / (hist.length || 1));
+  const elHistoryTrips = document.getElementById('aiKpiHistoryTrips');
+  if (elHistoryTrips) elHistoryTrips.textContent = `${hist.length} Bookings`;
+  const elHistorySummary = document.getElementById('aiKpiHistorySummary');
+  if (elHistorySummary) elHistorySummary.textContent = `Avg Spend: ₹${avgFare.toLocaleString('en-IN')} · Fav: ${prof.preferences.preferredAirlines[0] || 'IndiGo'}`;
+
+  const elOverride = document.getElementById('aiKpiOverride');
+  if (elOverride) elOverride.textContent = `Priority: ${(prof.preferences.priority || 'value').toUpperCase()}`;
+
+  const elHistoryStatus = document.getElementById('aiKpiHistoryStatus');
+  if (elHistoryStatus) {
+    const active = prof.preferences.useHistory !== false;
+    elHistoryStatus.textContent = active ? 'ACTIVE' : 'IGNORED (Privacy)';
+    elHistoryStatus.style.color = active ? '#10b981' : '#f43f5e';
+  }
+
+  // 2. Decision Weights Visualization
+  const weightsBox = document.getElementById('aiAdminWeightsContainer');
+  if (weightsBox) {
+    const p = prof.preferences;
+    const priceW = Math.round((p.priceImportance || 0.5) * 100);
+    const durW = Math.round((p.durationImportance || 0.4) * 100);
+    const comfW = Math.round((p.comfortImportance || 0.6) * 100);
+    const relW = Math.round((p.punctualityImportance || 0.7) * 100);
+
+    weightsBox.innerHTML = `
+      <div class="score-bar-row">
+        <span>💸 Price Sensitivity (${priceW}%)</span>
+        <div class="score-bar-track"><div class="score-bar-fill price" style="width:${priceW}%;"></div></div>
+        <b>${priceW}</b>
+      </div>
+      <div class="score-bar-row">
+        <span>⏱️ Duration Sensitivity (${durW}%)</span>
+        <div class="score-bar-track"><div class="score-bar-fill punctuality" style="width:${durW}%;"></div></div>
+        <b>${durW}</b>
+      </div>
+      <div class="score-bar-row">
+        <span>💺 Comfort & Extra Space (${comfW}%)</span>
+        <div class="score-bar-track"><div class="score-bar-fill comfort" style="width:${comfW}%;"></div></div>
+        <b>${comfW}</b>
+      </div>
+      <div class="score-bar-row">
+        <span>🛡️ Punctuality & OTP (${relW}%)</span>
+        <div class="score-bar-track"><div class="score-bar-fill reliability" style="width:${relW}%;"></div></div>
+        <b>${relW}</b>
+      </div>
+    `;
+  }
+
+  // 3. Profile Details
+  const detailsBox = document.getElementById('aiAdminProfileDetails');
+  if (detailsBox) {
+    detailsBox.innerHTML = `
+      <div class="route-row"><span>Customer ID</span><b>${prof.customerId}</b></div>
+      <div class="route-row"><span>Persona</span><b>${prof.persona}</b></div>
+      <div class="route-row"><span>Max Typical Budget</span><b>₹${(prof.preferences.maxTypicalBudget || 8000).toLocaleString('en-IN')}</b></div>
+      <div class="route-row"><span>Preferred Cabin</span><b>${prof.preferences.preferredCabin || 'Economy'}</b></div>
+      <div class="route-row"><span>Wheelchair Assistance</span><b>${prof.preferences.wheelchairAssistance ? 'Yes (Requested)' : 'No'}</b></div>
+      <div class="route-row"><span>Extra Legroom</span><b>${prof.preferences.extraLegroom ? 'Yes (Preferred)' : 'Standard'}</b></div>
+    `;
+  }
+
+  // 4. Autonomous Tool Registry
+  const toolBox = document.getElementById('aiAdminToolRegistry');
+  if (toolBox && window.AirfareXAgent.tools) {
+    toolBox.innerHTML = Object.entries(window.AirfareXAgent.tools).map(([name, tool]) => `
+      <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px; padding:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <b style="color:var(--brand-cyan); font-size:12.5px; font-family:'JetBrains Mono',monospace;">${name}()</b>
+          <span class="badge sm" style="font-size:9px; background:rgba(16,185,129,0.15); color:#10b981;">EXECUTABLE</span>
+        </div>
+        <div style="font-size:11.5px; color:var(--text-muted);">${tool.description}</div>
+      </div>
+    `).join('');
+  }
+}
+
+// Global window bindings for Phase 8 & 8.5 UX
 window.showTab = showTab;
 window.triggerSearch = triggerSearch;
 window.triggerHomeOrExplorerSearch = triggerHomeOrExplorerSearch;
@@ -4104,6 +4446,14 @@ window.executeNlSearch = executeNlSearch;
 window.setNlQuery = setNlQuery;
 window.toggleAiAssistant = toggleAiAssistant;
 window.toggleAiCopilotDrawer = toggleAiAssistant;
+window.switchDemoProfile = switchDemoProfile;
+window.aiChangePriority = aiChangePriority;
+window.askHeroAdvisor = askHeroAdvisor;
+window.toggleHistoryPreference = toggleHistoryPreference;
+window.resetActiveProfilePreferences = resetActiveProfilePreferences;
+window.openPersonalizationModal = openPersonalizationModal;
+window.handleSavePreferences = handleSavePreferences;
+window.renderAiAdvisorAdminMetrics = renderAiAdvisorAdminMetrics;
 
 
 

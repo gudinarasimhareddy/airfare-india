@@ -30,8 +30,10 @@ from datetime import datetime, timedelta
 
 # Force UTF-8 encoding for stdout on Windows
 if sys.platform == "win32":
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 # Add project root to sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

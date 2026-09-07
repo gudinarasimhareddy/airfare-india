@@ -208,6 +208,30 @@
         <img src="/assets/images/hero_aviation.jpg" alt="Commercial jetliner ascending above Indian metropolis" class="hero-backdrop-img">
         <div class="hero-overlay"></div>
         <div class="hero-content">
+          
+          <!-- Phase 8.5: Demo Customer Profile Switcher Bar -->
+          <div class="demo-profile-switcher-bar" id="demoProfileSwitcherBar">
+            <div class="profile-switcher-label">
+              <span style="font-size:16px;">👤</span>
+              <span>Active Customer Profile:</span>
+              <b id="activeProfileLabel" style="color:var(--brand-cyan);">Rajesh Sharma (Budget Traveler)</b>
+            </div>
+            <div class="profile-switcher-chips">
+              <button type="button" class="profile-chip-btn active" id="profBtn_budget" data-profile="DEMO-1001" onclick="switchDemoProfile('DEMO-1001')">
+                <span>💼</span> <span>Rajesh (Budget)</span>
+              </button>
+              <button type="button" class="profile-chip-btn" id="profBtn_comfort" data-profile="DEMO-1002" onclick="switchDemoProfile('DEMO-1002')">
+                <span>🛋️</span> <span>Priya (Comfort)</span>
+              </button>
+              <button type="button" class="profile-chip-btn" id="profBtn_time_critical" data-profile="DEMO-1003" onclick="switchDemoProfile('DEMO-1003')">
+                <span>⚡</span> <span>Vikram (Executive)</span>
+              </button>
+              <button type="button" class="profile-chip-btn" onclick="openPersonalizationModal()" title="View history & travel preferences">
+                <span>⚙️</span> <span>Preferences</span>
+              </button>
+            </div>
+          </div>
+
           <div class="hero-top-badges">
             <span class="hero-pill green">● AVIATION INTELLIGENCE &amp; FLIGHT SEARCH</span>
             <span class="hero-pill">🇮🇳 ALL INDIAN DOMESTIC AIRLINES INCLUDED</span>
@@ -291,22 +315,49 @@
               </div>
             </div>
 
-            <!-- Natural Language AI Search Input (Phase 7 / 8) -->
-            <div class="nl-ai-search-box">
-              <div class="nl-ai-search-inner">
+            <!-- AI Travel Advisor Card (Phase 8 & 8.5) -->
+            <div class="nl-ai-search-box hero-advisor-card" id="heroAdvisorCard" style="padding:16px 20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:18px;">🤖</span>
+                  <div>
+                    <h3 style="margin:0; font-size:15px; font-weight:800; color:var(--text-main);">AI Travel Advisor</h3>
+                    <span style="font-size:11px; color:var(--brand-cyan);" id="heroAdvisorTagline">Personalized recommendation matched to Rajesh Sharma's preferences</span>
+                  </div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <span class="badge green" id="heroAdvisorProfileBadge" style="font-size:10.5px; font-weight:700;">Rajesh Sharma (Budget)</span>
+                  <button type="button" class="btn sm light" onclick="toggleAiAssistant()" style="font-size:11px; padding:3px 8px;">Open Advisor 💬</button>
+                </div>
+              </div>
+
+              <!-- Priority Selector Chips ("What matters most?") -->
+              <div class="ai-priority-chips-bar" id="heroPriorityChips">
+                <span style="font-size:11.5px; color:var(--text-muted); font-weight:700;">What matters most?</span>
+                <button type="button" class="priority-chip active" id="chip_cheapest" onclick="aiChangePriority('cheapest', this)">💰 Cheapest</button>
+                <button type="button" class="priority-chip" id="chip_comfort" onclick="aiChangePriority('comfort', this)">🛋️ Comfort</button>
+                <button type="button" class="priority-chip" id="chip_fastest" onclick="aiChangePriority('fastest', this)">⚡ Fastest</button>
+                <button type="button" class="priority-chip" id="chip_reliable" onclick="aiChangePriority('reliable', this)">🛡️ Reliability</button>
+                <button type="button" class="priority-chip" id="chip_value" onclick="aiChangePriority('value', this)">💎 Best Value</button>
+                <button type="button" class="priority-chip" id="chip_best_for_me" onclick="askHeroAdvisor()">🎯 Best Match For Me</button>
+              </div>
+
+              <div class="nl-ai-search-inner" style="margin-top:10px;">
                 <span class="nl-ai-icon">✨</span>
-                <input type="text" id="heroNlSearchInput" placeholder="Try: cheapest non-stop flight from Hyderabad to Delhi" onkeydown="if(event.key==='Enter') executeNlSearch('heroNlSearchInput')">
-                <button type="button" class="btn green sm nl-ai-btn" id="heroAskAiBtn" onclick="executeNlSearch('heroNlSearchInput')">
-                  <span>Ask AirfareX</span> <span>⚡</span>
+                <input type="text" id="heroAdvisorInput" placeholder="Try: 'What flight is best for me from Hyderabad to Delhi?' or 'Prioritize comfort this trip'" onkeydown="if(event.key==='Enter') askHeroAdvisor()">
+                <button type="button" class="btn green sm nl-ai-btn" id="heroAskAiBtn" onclick="askHeroAdvisor()">
+                  <span>Ask AI Advisor</span> <span>⚡</span>
                 </button>
               </div>
-              <div class="nl-ai-hints">
-                <span>💡 Try demo routes:</span>
-                <a href="javascript:void(0)" onclick="selectDemoRoute('HYD', 'DEL')">⚡ Hyderabad ➔ Delhi</a>
-                <a href="javascript:void(0)" onclick="selectDemoRoute('HYD', 'BOM')">⚡ Hyderabad ➔ Mumbai</a>
-                <a href="javascript:void(0)" onclick="selectDemoRoute('BLR', 'DEL')">⚡ Bengaluru ➔ Delhi</a>
-                <a href="javascript:void(0)" onclick="selectDemoRoute('BOM', 'DEL')">⚡ Mumbai ➔ Delhi</a>
-                <a href="javascript:void(0)" onclick="exploreDemoFlights()">🌐 View All 20+ Demo Flights</a>
+
+              <div class="nl-ai-hints" style="margin-top:10px;">
+                <span>💡 Quick Prompts:</span>
+                <a href="javascript:void(0)" onclick="sendPromptToAi('What is the best flight for me from Hyderabad to Delhi?')">🎯 Best For Me</a>
+                <a href="javascript:void(0)" onclick="sendPromptToAi('Find the cheapest flight from Hyderabad to Delhi')">💰 Find Cheapest</a>
+                <a href="javascript:void(0)" onclick="sendPromptToAi('Compare the top 3 flights from Hyderabad to Delhi')">⚖️ Compare Top 3</a>
+                <a href="javascript:void(0)" onclick="sendPromptToAi('Why does this flight have a high score?')">💡 Why This Score?</a>
+                <a href="javascript:void(0)" onclick="sendPromptToAi('This time comfort is more important than price')">🛋️ Prioritize Comfort</a>
+                <a href="javascript:void(0)" onclick="sendPromptToAi('Book the best flight')">✈️ Book Best Flight</a>
               </div>
             </div>
 
@@ -1169,6 +1220,9 @@
         <button type="button" class="admin-subtab-btn" id="adminBtnQuality" onclick="switchAdminPortalTab('quality', this)">
           <span>🔍</span> <span>Data Quality & Audit Center</span>
         </button>
+        <button type="button" class="admin-subtab-btn" id="adminBtnAiMetrics" onclick="switchAdminPortalTab('ai-metrics', this)">
+          <span>🤖</span> <span>AI Travel Advisor Metrics</span>
+        </button>
       </div>
 
       <!-- SUB-SECTION 1: ROUTE INTELLIGENCE -->
@@ -1312,6 +1366,74 @@
             <div class="metric-title" data-i18n="dq_outliers">Outliers Screened</div>
             <div class="metric" id="qOutliers">1,613</div>
             <div class="metric-sub" data-i18n="dq_outliers_sub">IQR anomaly detection</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-SECTION 4: AI TRAVEL ADVISOR SESSION METRICS -->
+      <div id="ai-metrics" class="admin-subview hidden">
+        <div class="section-head" style="margin-top:16px;">
+          <div>
+            <h2>🤖 AI Travel Advisor Telemetry & Decision Metrics</h2>
+            <p class="metric-sub">Real-time session insights, customer profile sensitivity weightings, autonomous tool executions, and priority overrides.</p>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn light sm" onclick="renderAiAdvisorAdminMetrics()">🔄 Refresh Telemetry</button>
+            <button class="btn sm green" onclick="toggleAiAssistant()">Open AI Copilot ➔</button>
+          </div>
+        </div>
+
+        <div class="grid-4" id="aiAdminKpisGrid">
+          <div class="card kpi-card">
+            <div class="metric-title">Active Customer Profile</div>
+            <div class="metric" id="aiKpiProfile" style="font-size:20px; color:var(--brand-cyan);">Rajesh Sharma</div>
+            <div class="metric-sub" id="aiKpiPersona">Budget Traveler (DEMO-1001)</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title">Historical Bookings</div>
+            <div class="metric" id="aiKpiHistoryTrips">10 Trips</div>
+            <div class="metric-sub good" id="aiKpiHistorySummary">Avg Spend: ₹4,220 · 70% IndiGo</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title">Decision Strategy</div>
+            <div class="metric" id="aiKpiStrategy" style="font-size:18px; color:var(--brand-mint);">Dual-Score Hybrid</div>
+            <div class="metric-sub" id="aiKpiOverride">Priority: Budget Value</div>
+          </div>
+          <div class="card kpi-card">
+            <div class="metric-title">History Usage Status</div>
+            <div class="metric" id="aiKpiHistoryStatus" style="color:#10b981; font-size:20px;">ACTIVE</div>
+            <div class="metric-sub">Weighting from past trips enabled</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Real-Time Decision Weights -->
+          <div class="card">
+            <h2>🎯 Multi-Factor Decision Weights</h2>
+            <p class="metric-sub" style="margin-bottom:14px;">Calculated from active profile preferences + historical booking analysis + priority override.</p>
+            <div id="aiAdminWeightsContainer" style="display:flex; flex-direction:column; gap:10px;">
+              <!-- Dynamic weight bars -->
+            </div>
+          </div>
+
+          <!-- Active Profile & History Deep Dive -->
+          <div class="card">
+            <h2>👤 Customer Profile & Accessibility Meta</h2>
+            <p class="metric-sub" style="margin-bottom:14px;">Behavioral fingerprint and explicit customer travel preferences.</p>
+            <div id="aiAdminProfileDetails" style="font-size:13px; display:flex; flex-direction:column; gap:8px;">
+              <!-- Dynamic profile summary -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Autonomous Agent Tool Calling Log -->
+        <div class="card section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h2 style="margin:0;">🛠️ Agent Autonomous Tool Execution Registry</h2>
+            <span class="badge blue">14 Tools Registered</span>
+          </div>
+          <div id="aiAdminToolRegistry" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:10px; margin-top:12px;">
+            <!-- Rendered by JS -->
           </div>
         </div>
       </div>
@@ -2593,63 +2715,113 @@
   </div>
 
   <!-- =========================================================
-       MODAL 12: USER TRAVEL PREFERENCES (PERSONALIZATION)
+       MODAL 12: USER TRAVEL PREFERENCES & AI PERSONALIZATION (PHASE 8.5)
        ========================================================= -->
   <div class="modal-backdrop" id="userPreferencesModal">
-    <div class="modal-window" style="max-width:480px; padding:24px;">
+    <div class="modal-window" style="max-width:540px; padding:24px; max-height:90vh; overflow-y:auto;">
       <button class="modal-close-btn" onclick="closeModal('userPreferencesModal')">✕</button>
 
       <div style="margin-bottom:16px;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-          <span class="badge purple">AI PERSONALIZATION</span>
+          <span class="badge purple">AI TRAVEL ADVISOR PERSONALIZATION</span>
+          <span class="badge green" id="modalProfilePersonaBadge">Budget Traveler</span>
         </div>
-        <h2 style="margin:0; font-size:19px;">Traveler Scoring Preferences</h2>
-        <p class="metric-sub" style="margin:4px 0 0;">Customize how the AI scoring algorithm ranks and badges flights for you.</p>
+        <h2 style="margin:0; font-size:20px;">Customer Profile & Travel Preferences</h2>
+        <p class="metric-sub" style="margin:4px 0 0;">Customize behavioral scoring, historical trip weighting, and accessibility requirements.</p>
       </div>
 
       <form id="userPreferencesForm" onsubmit="handleSavePreferences(event)">
-        <div class="field" style="margin-bottom:14px;">
-          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Primary Priority</label>
-          <select id="prefPriority" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
-            <option value="best_value">💎 Best Value (Balanced Price & Duration)</option>
-            <option value="lowest_price">💸 Lowest Price (Heavily weight fare)</option>
-            <option value="fastest">⚡ Fastest Travel Time (Minimize duration)</option>
-            <option value="nonstop">🛑 Non-Stop Only (Penalize connecting flights)</option>
-          </select>
+        <!-- Active Demo Customer Profile Switcher inside Modal -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:800; text-transform:uppercase; color:var(--brand-cyan); letter-spacing:0.5px; display:block; margin-bottom:8px;">Switch Demo Customer Profile</label>
+          <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
+            <button type="button" class="btn sm light" id="modalProfBtn_DEMO_1001" onclick="switchDemoProfile('DEMO-1001')" style="font-size:11.5px; padding:6px 8px; text-align:center;">
+              <b>💰 Rajesh</b><br><span style="font-size:10px; opacity:0.8;">Budget</span>
+            </button>
+            <button type="button" class="btn sm light" id="modalProfBtn_DEMO_1002" onclick="switchDemoProfile('DEMO-1002')" style="font-size:11.5px; padding:6px 8px; text-align:center;">
+              <b>🛋️ Priya</b><br><span style="font-size:10px; opacity:0.8;">Comfort</span>
+            </button>
+            <button type="button" class="btn sm light" id="modalProfBtn_DEMO_1003" onclick="switchDemoProfile('DEMO-1003')" style="font-size:11.5px; padding:6px 8px; text-align:center;">
+              <b>⚡ Vikram</b><br><span style="font-size:10px; opacity:0.8;">Executive</span>
+            </button>
+          </div>
         </div>
 
-        <div class="field" style="margin-bottom:14px;">
-          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Preferred Departure Time</label>
-          <select id="prefTime" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
-            <option value="any">Any Time of Day</option>
-            <option value="morning">🌅 Morning Departure (05:00 – 12:00)</option>
-            <option value="afternoon">☀️ Afternoon (12:00 – 17:00)</option>
-            <option value="evening">🌙 Evening / Night (17:00 – 23:00)</option>
-          </select>
-        </div>
-
-        <div class="field" style="margin-bottom:14px;">
-          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Preferred Airline</label>
-          <select id="prefAirline" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
-            <option value="">No Preference (All Airlines)</option>
-            <option value="IndiGo">IndiGo</option>
-            <option value="Air India">Air India</option>
-            <option value="Akasa Air">Akasa Air</option>
-            <option value="SpiceJet">SpiceJet</option>
-            <option value="Air India Express">Air India Express</option>
-          </select>
-        </div>
-
-        <div style="margin-bottom:18px;">
-          <label class="switch-control" style="font-size:13px;">
-            <input type="checkbox" id="prefFlexDates">
-            <span>Flexible with travel dates (Show low-fare adjacent days)</span>
+        <!-- History Weighting Privacy Control Toggle -->
+        <div style="background:rgba(14,165,233,0.06); border:1px solid rgba(14,165,233,0.25); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:14px;">
+          <label class="switch-control" style="font-size:13px; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" id="prefUseHistory" checked onchange="toggleHistoryPreference(this)">
+            <span>📊 Use Past 10 Booking Records for Smart Weighting</span>
           </label>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px; padding-left:26px;" id="modalHistoryExplanation">
+            When enabled, the AI weights your past average spend (₹4,220), favorite airlines, and on-time sensitivity to find the best match.
+          </div>
         </div>
 
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
-          <button type="button" class="btn light" onclick="closeModal('userPreferencesModal')">Cancel</button>
-          <button type="submit" class="btn primary">Save Preferences</button>
+        <!-- Primary Priority -->
+        <div class="field" style="margin-bottom:12px;">
+          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Primary Travel Priority</label>
+          <select id="prefPriority" style="width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
+            <option value="value">💎 Best Value (Balanced Price, Duration & Reliability)</option>
+            <option value="cheapest">💸 Lowest Price (Heavily weight base fare)</option>
+            <option value="comfort">🛋️ Comfort & Space (Legroom, Meals, Fleet Quality)</option>
+            <option value="fastest">⚡ Fastest Travel Time (Minimize door-to-door duration)</option>
+            <option value="reliable">🛡️ Punctuality & Reliability (DGCA OTP & Low Delay Risk)</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+          <div class="field">
+            <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Preferred Departure Slot</label>
+            <select id="prefTime" style="width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
+              <option value="any">Any Time</option>
+              <option value="morning">🌅 Morning (05:00 – 12:00)</option>
+              <option value="afternoon">☀️ Afternoon (12:00 – 17:00)</option>
+              <option value="evening">🌙 Evening / Night (17:00 – 23:00)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Preferred Airline</label>
+            <select id="prefAirline" style="width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
+              <option value="">No Preference (All Airlines)</option>
+              <option value="IndiGo">IndiGo</option>
+              <option value="Air India">Air India</option>
+              <option value="Akasa Air">Akasa Air</option>
+              <option value="SpiceJet">SpiceJet</option>
+              <option value="Air India Express">Air India Express</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Optional Accessibility & Travel Needs -->
+        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:16px;">
+          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; display:block; margin-bottom:8px;">Optional Travel Needs & Assistance</label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="prefWheelchair">
+              <span>♿ Wheelchair Assistance</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="prefExtraLegroom">
+              <span>💺 Extra Legroom / Front Row</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="prefVegMeal">
+              <span>🍱 Special / Veg Meal Request</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="checkbox" id="prefAisleSeat">
+              <span>🚶 Aisle Seat Preference</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <button type="button" class="btn light sm" onclick="resetActiveProfilePreferences()">Reset Defaults</button>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn light" onclick="closeModal('userPreferencesModal')">Cancel</button>
+            <button type="submit" class="btn primary">Save & Apply</button>
+          </div>
         </div>
       </form>
     </div>
@@ -2668,7 +2840,7 @@
   <!-- Floating Launcher FAB -->
   <button class="ai-fab-btn copilot-fab-btn" id="copilotFabBtn" onclick="toggleAiAssistant()" title="Open AirfareX AI Copilot" aria-label="Open AirfareX AI Copilot">
     <span class="ai-fab-icon">🤖</span>
-    <span data-i18n="ai_btn_label">AI Copilot</span>
+    <span data-i18n="ai_btn_label">AI Advisor</span>
     <span class="ai-fab-pulse copilot-fab-pulse"></span>
   </button>
 
@@ -2678,36 +2850,50 @@
       <div class="ai-header-left">
         <div class="ai-avatar">🤖</div>
         <div>
-          <h3 class="ai-header-title" data-i18n="ai_title">AirfareX Agentic AI Copilot</h3>
-          <span class="ai-header-status" data-i18n="ai_badge_online" style="color:var(--brand-cyan);">● Agentic AI · Multi-Tool Execution & Reasoning Trace</span>
+          <h3 class="ai-header-title">AirfareX AI Travel Advisor</h3>
+          <span class="ai-header-status" id="aiChatHeaderStatus" style="color:var(--brand-cyan);">● Personal Match Engine Active</span>
         </div>
       </div>
       <div class="ai-header-actions">
+        <button class="ai-action-btn" onclick="openModal('userPreferencesModal')" title="Personalize Preferences">⚙️</button>
         <button class="ai-action-btn" onclick="clearAiChat()" title="Clear Chat" data-i18n-title="ai_clear_chat">🗑️</button>
         <button class="ai-action-btn" onclick="toggleAiAssistant()" title="Close Assistant">✕</button>
+      </div>
+    </div>
+
+    <!-- Active Profile Quick Pill Strip inside Chat Header -->
+    <div style="background:rgba(0,0,0,0.25); border-bottom:1px solid rgba(255,255,255,0.06); padding:8px 14px; display:flex; justify-content:space-between; align-items:center; font-size:11.5px;">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="color:var(--text-muted);">Active:</span>
+        <b id="chatActiveProfileName" style="color:var(--brand-cyan);">Rajesh Sharma (Budget)</b>
+      </div>
+      <div style="display:flex; gap:4px;">
+        <button type="button" class="btn sm light" onclick="switchDemoProfile('DEMO-1001')" style="padding:2px 6px; font-size:10px;">Rajesh</button>
+        <button type="button" class="btn sm light" onclick="switchDemoProfile('DEMO-1002')" style="padding:2px 6px; font-size:10px;">Priya</button>
+        <button type="button" class="btn sm light" onclick="switchDemoProfile('DEMO-1003')" style="padding:2px 6px; font-size:10px;">Vikram</button>
       </div>
     </div>
 
     <!-- Chat Message History -->
     <div class="ai-chat-body" id="aiChatBody">
       <div class="ai-msg assistant" id="aiWelcomeBubble">
-        <div data-i18n="ai_welcome_msg">Namaste! I am your <strong>AirfareX AI Copilot</strong>. I analyze flight schedules, price trends, multi-factor value scores, baggage policies, and DGCA passenger guidelines to help you make smarter booking decisions. How can I help with your journey today?</div>
+        <div>Namaste! I am your <strong>AirfareX Personalized AI Travel Advisor</strong>. I combine your travel history (10 past bookings), your explicit comfort/budget preferences, and real-time flight metrics (AirfareX Score & Your Personal Match) to find the best flight for you. How can I assist you today?</div>
       </div>
     </div>
 
     <!-- Quick Prompt Suggestions Chips -->
     <div class="ai-chips-wrapper" id="aiQuickChips">
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">✨ Which flight should I choose?</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">⚖️ Why is this flight better?</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">📈 Is this price good?</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🎯 Find the best flight for me</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🏆 What is the best overall flight?</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🛋️ This time comfort is more important</button>
       <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">💰 Show me the cheapest option</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">⚡ Find a faster option</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🔍 Compare these flights</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">⚖️ Compare top 2 flights for me</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🔍 Why is this flight my top match?</button>
     </div>
 
     <!-- Chat Input Area -->
     <div class="ai-chat-input-row">
-      <input type="text" id="aiInputField" class="ai-input-field" placeholder="Ask AirfareX: 'Which flight should I choose?'" data-i18n-placeholder="ai_input_placeholder" onkeydown="handleAiInputKey(event)">
+      <input type="text" id="aiInputField" class="ai-input-field" placeholder="Ask Advisor: 'Find the best morning flight for me'" data-i18n-placeholder="ai_input_placeholder" onkeydown="handleAiInputKey(event)">
       <button class="ai-send-btn" onclick="handleSendAiMessage()" title="Send Message" data-i18n-title="ai_btn_send">➤</button>
     </div>
   </div>
@@ -2723,11 +2909,12 @@
     </div>
   </footer>
 
-  <!-- Scripts: Localization, Supabase SDK, Auth Client, API Client, Demo Dataset, Charts & App Controller -->
+  <!-- Scripts: Localization, Supabase SDK, Auth Client, Demo Dataset, Agentic AI Advisor, API Client, Charts & App Controller -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/i18n.js"></script>
   <script src="/js/auth.js"></script>
   <script src="/js/demoData.js"></script>
+  <script src="/js/aiAgent.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/charts.js"></script>
   <script src="/js/app.js"></script>
