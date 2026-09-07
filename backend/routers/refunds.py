@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime, timedelta
 from backend.database import get_db_connection
+from backend.supabase_client import get_refund_from_supabase, save_refund_to_supabase
+from backend.auth import AuthUser, get_optional_user
 
 router = APIRouter(prefix="/refunds", tags=["Refund Tracking"])
 
@@ -16,7 +18,7 @@ class RefundClaimRequest(BaseModel):
     payment_method: str = Field("UPI / Google Pay", example="UPI / Google Pay")
 
 class RefundItem(BaseModel):
-    id: int
+    id: Optional[int] = 1
     pnr: str
     passenger_name: str
     airline: str
@@ -73,10 +75,13 @@ def build_timeline(stage: int, cancel_date: str, credit_date: str):
     ]
 
 @router.get("", response_model=List[RefundItem])
-def list_refunds():
+def list_refunds(current_user: Optional[AuthUser] = Depends(get_optional_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM refunds ORDER BY id DESC LIMIT 10")
+    if current_user:
+        cursor.execute("SELECT * FROM refunds WHERE user_id = ? ORDER BY id DESC LIMIT 10", (current_user.id,))
+    else:
+        cursor.execute("SELECT * FROM refunds WHERE user_id = 'guest' OR user_id IS NULL ORDER BY id DESC LIMIT 10")
     rows = cursor.fetchall()
     conn.close()
 
@@ -88,12 +93,16 @@ def list_refunds():
     return results
 
 @router.get("/track/{pnr}", response_model=RefundItem)
-def track_refund(pnr: str):
+async def track_refund(pnr: str):
     clean_pnr = pnr.replace(" ", "").replace("-", "").strip().upper()
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM refunds WHERE UPPER(pnr) = ?", (clean_pnr,))
+    cursor.execute("""
+        SELECT * FROM refunds 
+        WHERE UPPER(pnr) = ? OR UPPER(REPLACE(pnr, '-', '')) = ? OR UPPER(pnr) = ?
+        LIMIT 1
+    """, (pnr.strip().upper(), clean_pnr, clean_pnr))
     row = cursor.fetchone()
     conn.close()
 
@@ -101,17 +110,32 @@ def track_refund(pnr: str):
         d = dict(row)
         d["timeline"] = build_timeline(d["stage"], d["cancellation_date"], d["expected_credit_date"])
         return RefundItem(**d)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No active refund record found for PNR '{clean_pnr}'. If you recently cancelled your flight, please submit a claim below."
+
+    # Check Supabase cloud if not found in local SQLite
+    supa_refund = await get_refund_from_supabase(clean_pnr)
+    if supa_refund:
+        supa_refund["id"] = supa_refund.get("id", 1)
+        supa_refund["timeline"] = build_timeline(
+            int(supa_refund.get("stage", 1)),
+            str(supa_refund.get("cancellation_date", "2026-09-01")),
+            str(supa_refund.get("expected_credit_date", "2026-09-07"))
         )
+        return RefundItem(**supa_refund)
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"No active refund record found for PNR '{clean_pnr}'. If you recently cancelled your flight, please submit a claim below."
+    )
 
 @router.post("/claim", response_model=RefundItem, status_code=status.HTTP_201_CREATED)
-def submit_claim(claim: RefundClaimRequest):
+async def submit_claim(
+    claim: RefundClaimRequest,
+    current_user: Optional[AuthUser] = Depends(get_optional_user)
+):
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    uid = current_user.id if current_user else "guest"
     now = datetime.now()
     cancel_date = now.strftime("%Y-%m-%d")
     credit_date = (now + timedelta(days=5)).strftime("%Y-%m-%d")
@@ -122,12 +146,12 @@ def submit_claim(claim: RefundClaimRequest):
 
     cursor.execute("""
         INSERT OR REPLACE INTO refunds (
-            pnr, passenger_name, airline, flight_no, sector, total_fare,
+            user_id, pnr, passenger_name, airline, flight_no, sector, total_fare,
             cancellation_fee, refund_amount, payment_method, arn_number,
             status, stage, cancellation_date, expected_credit_date
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Initiated', 1, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Initiated', 1, ?, ?)
     """, (
-        clean_pnr, claim.passenger_name, claim.airline, claim.flight_no, claim.sector,
+        uid, clean_pnr, claim.passenger_name, claim.airline, claim.flight_no, claim.sector,
         claim.total_fare, cancellation_fee, refund_amount, claim.payment_method,
         arn, cancel_date, credit_date
     ))
@@ -137,6 +161,28 @@ def submit_claim(claim: RefundClaimRequest):
     cursor.execute("SELECT * FROM refunds WHERE id = ?", (refund_id,))
     row = cursor.fetchone()
     conn.close()
+
+    # Mirror to Supabase if configured (non-blocking)
+    try:
+        await save_refund_to_supabase({
+            "user_id": uid if uid != "guest" else None,
+            "pnr": clean_pnr,
+            "passenger_name": claim.passenger_name,
+            "airline": claim.airline,
+            "flight_no": claim.flight_no,
+            "sector": claim.sector,
+            "total_fare": claim.total_fare,
+            "cancellation_fee": cancellation_fee,
+            "refund_amount": refund_amount,
+            "payment_method": claim.payment_method,
+            "arn_number": arn,
+            "status": "Initiated",
+            "stage": 1,
+            "cancellation_date": cancel_date,
+            "expected_credit_date": credit_date
+        })
+    except Exception as e:
+        print(f"[Supabase refund claim sync note] {e}")
 
     d = dict(row)
     d["timeline"] = build_timeline(d["stage"], d["cancellation_date"], d["expected_credit_date"])

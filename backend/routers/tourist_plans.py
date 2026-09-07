@@ -299,6 +299,222 @@ TOURIST_PACKAGES = [
         },
         "inclusions": ["Return Flights", "5-Star Oberoi Hotel 2 Nights", "Daily Breakfast", "AC Private Transport", "Hooghly Ferry Passes"],
         "exclusions": ["Personal meals & shopping"]
+    },
+    {
+        "id": "tour-kerala-4d",
+        "destination": "COK",
+        "city_name": "Kerala (God's Own Country & Backwaters)",
+        "package_title": "Kerala Backwaters, Houseboat & Tea Gardens",
+        "duration": "4 Days / 3 Nights",
+        "hero_image": "/assets/images/destination_mumbai.jpg",
+        "tagline": "Alleppey luxury houseboat cruise, Munnar misty tea estates, and authentic Ayurvedic wellness.",
+        "flight": {
+            "airline": "IndiGo",
+            "flight_no": "6E 561",
+            "type": "Direct Return Flight Included",
+            "baggage": "7kg Cabin + 15kg Checked Baggage Included",
+            "seat_pitch": "30\" Value Pitch"
+        },
+        "hotel": {
+            "name": "Kumarakom Lake Resort & Munnar Fragrant Nature",
+            "rating": "4.9 / 5 ★★★★★",
+            "room_type": "Meandering Pool Heritage Villa",
+            "amenities": ["Daily Buffet Breakfast & Dinner", "1-Night AC Houseboat Stay", "Ayurvedic Massage Session", "Spice Plantation Tour"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Cochin Arrival & Drive to Munnar Tea Hills",
+                "details": "Arrival at Kochi Airport (COK). Scenic drive past Cheeyappara Waterfalls to Munnar tea plantations. Evening stroll through spice markets."
+            },
+            {
+                "day": "Day 2",
+                "title": "Eravikulam National Park & Mattupetty Dam",
+                "details": "Breakfast. Visit Eravikulam National Park (home to Nilgiri Tahr) and Tata Tea Museum. Boat ride at Mattupetty Lake."
+            },
+            {
+                "day": "Day 3",
+                "title": "Alleppey Backwaters Houseboat Cruise",
+                "details": "Drive to Alleppey. Board traditional Kerala houseboat. Cruise along palm-fringed canals with freshly prepared Karimeen fish lunch."
+            },
+            {
+                "day": "Day 4",
+                "title": "Fort Kochi Chinese Fishing Nets & Departure",
+                "details": "Morning checkout. Tour historic Fort Kochi and Chinese fishing nets. Private transfer to Cochin International Airport."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 18500,
+            "price_with_offers": 13999,
+            "savings": 4501,
+            "discount_pct": 24,
+            "applied_promo": "KERALAFLY",
+            "promo_label": "Promo Code KERALAFLY Applied (Save ₹4,501)"
+        },
+        "inclusions": ["Return Flight Tickets", "Houseboat + Luxury Resort", "All Meals on Houseboat", "Chauffeur Transport", "Spice Tour"],
+        "exclusions": ["Personal Ayurvedic treatments outside package"]
+    },
+    {
+        "id": "tour-kashmir-4d",
+        "destination": "SXR",
+        "city_name": "Kashmir (Paradise on Earth)",
+        "package_title": "Dal Lake Shikara, Mughal Gardens & Gulmarg Gondola",
+        "duration": "4 Days / 3 Nights",
+        "hero_image": "/assets/images/hero_aviation.jpg",
+        "tagline": "Stay in luxury Dal Lake houseboat, ride the Gulmarg Gondola, and savor traditional Wazwan.",
+        "flight": {
+            "airline": "Air India",
+            "flight_no": "AI 825",
+            "type": "Direct Return Flight",
+            "baggage": "7kg Cabin + 20kg Checked Baggage Included",
+            "seat_pitch": "32\" Hot Meals Included"
+        },
+        "hotel": {
+            "name": "Mascot Houseboats Dal Lake & The Khyber Gulmarg",
+            "rating": "4.9 / 5 ★★★★★",
+            "room_type": "Cedar Wood Suite & Pine View Room",
+            "amenities": ["Daily Kashmiri Breakfast & Wazwan", "Private Shikara Ride", "Heated Rooms", "Traditional Kehwa Welcome"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Srinagar Arrival & Romantic Shikara Ride",
+                "details": "Arrival at Sheikh ul-Alam Airport (SXR). Check-in to luxury houseboat on Dal Lake. Sunset Shikara ride across floating lotus gardens and Char Chinar."
+            },
+            {
+                "day": "Day 2",
+                "title": "Gulmarg Snow Peaks & Gondola Ride",
+                "details": "Drive to snow-clad Gulmarg. Ride Phase 1 & 2 Gondola up to Apharwat Peak (13,780 ft). Skiing and snow activities. Return to Srinagar."
+            },
+            {
+                "day": "Day 3",
+                "title": "Mughal Gardens & Old City Saffron Bazaar",
+                "details": "Tour Shalimar Bagh, Nishat Bagh, and Chashme Shahi terraced gardens. Saffron and Pashmina shopping in Lal Chowk."
+            },
+            {
+                "day": "Day 4",
+                "title": "Pari Mahal Panorama & Airport Drop",
+                "details": "Morning visit to Pari Mahal overlooking Dal Lake. Authentic Kehwa tea and dry fruits sampling. Transfer to Srinagar Airport."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 21500,
+            "price_with_offers": 16499,
+            "savings": 5001,
+            "discount_pct": 23,
+            "applied_promo": "KASHMIRPARADISE",
+            "promo_label": "Promo Code KASHMIRPARADISE Applied (Save ₹5,001)"
+        },
+        "inclusions": ["Return Flights", "Dal Lake Houseboat + Hotel", "Daily Breakfast & Dinner", "Shikara Ride", "All Tolls & AC Cab"],
+        "exclusions": ["Gondola Phase 2 ticket", "Pony rides"]
+    },
+    {
+        "id": "tour-manali-4d",
+        "destination": "IXC",
+        "city_name": "Manali (Himalayan Adventure & Pine Valleys)",
+        "package_title": "Solang Adventure, Rohtang Pass & Old Manali Cafes",
+        "duration": "4 Days / 3 Nights",
+        "hero_image": "/assets/images/destination_delhi.jpg",
+        "tagline": "Solang paragliding, snow vistas at Atal Tunnel, apple orchards, and live acoustic music.",
+        "flight": {
+            "airline": "Alliance Air",
+            "flight_no": "9I 803",
+            "type": "Direct Return Flight to Chandigarh/Kullu",
+            "baggage": "7kg Cabin + 15kg Checked Baggage Included",
+            "seat_pitch": "30\" Legroom"
+        },
+        "hotel": {
+            "name": "The Himalayan Castle & Spa Manali",
+            "rating": "4.8 / 5 ★★★★★",
+            "room_type": "Victorian Mountain View Suite",
+            "amenities": ["Daily Mountain Breakfast", "Bonfire Evening with Guitarist", "Apple Cider Welcome Drink", "Spa Credit"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Chandigarh Landing & Scenic Beas River Drive",
+                "details": "Flight arrival at IXC. Scenic private cab drive through Mandi and Kullu along Beas River. Check-in at Victorian castle resort in Manali."
+            },
+            {
+                "day": "Day 2",
+                "title": "Solang Valley Paragliding & Atal Tunnel Sissu",
+                "details": "Thrilling adventure day in Solang Valley (paragliding & quad biking). Drive through engineering marvel Atal Tunnel to Lahaul valley (Sissu waterfall)."
+            },
+            {
+                "day": "Day 3",
+                "title": "Hadimba Temple, Jogini Falls & Old Manali Cafes",
+                "details": "Morning walk to 16th-century cedar Hadimba Temple and hike to Jogini Waterfall. Evening café hopping in bohemian Old Manali."
+            },
+            {
+                "day": "Day 4",
+                "title": "Naggar Castle & Return Flight",
+                "details": "Visit historic Naggar Castle and Roerich Art Gallery. Return drive to Chandigarh Airport for flight back."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 17200,
+            "price_with_offers": 12850,
+            "savings": 4350,
+            "discount_pct": 25,
+            "applied_promo": "HIMALAYAN",
+            "promo_label": "Promo Code HIMALAYAN Applied (Save ₹4,350)"
+        },
+        "inclusions": ["Return Flight Tickets", "Luxury Resort 3 Nights", "Daily Breakfast & Dinner", "AC Innova Chauffeur", "Solang Excursion"],
+        "exclusions": ["Paragliding equipment fees", "Rohtang special permit"]
+    },
+    {
+        "id": "tour-andaman-4d",
+        "destination": "IXZ",
+        "city_name": "Andaman & Nicobar Islands (Tropical Emerald Coast)",
+        "package_title": "Havelock Radhanagar Beach, Scuba & Cellular Jail",
+        "duration": "4 Days / 3 Nights",
+        "hero_image": "/assets/images/destination_mumbai.jpg",
+        "tagline": "Asia's best Radhanagar Beach, crystal clear scuba diving at Elephant Beach, and Cellular Jail sound & light show.",
+        "flight": {
+            "airline": "IndiGo",
+            "flight_no": "6E 292",
+            "type": "Direct Return Flight Included",
+            "baggage": "7kg Cabin + 15kg Checked Baggage Included",
+            "seat_pitch": "30\" Standard Pitch"
+        },
+        "hotel": {
+            "name": "Taj Exotica Resort & Symphony Palms Beach Resort",
+            "rating": "4.9 / 5 ★★★★★",
+            "room_type": "Beachfront Villa",
+            "amenities": ["Gourmet Island Breakfast", "Makruzz Catamaran Cruise Ferry", "Private Beach Access", "Snorkeling Voucher"]
+        },
+        "itinerary": [
+            {
+                "day": "Day 1",
+                "title": "Port Blair Arrival & Cellular Jail Memorial",
+                "details": "Arrival at Veer Savarkar Airport (IXZ). Check-in and relax. Visit National Memorial Cellular Jail. Evening moving Sound & Light history show."
+            },
+            {
+                "day": "Day 2",
+                "title": "Premium Catamaran to Havelock & Radhanagar Sunset",
+                "details": "High-speed Makruzz catamaran cruise to Havelock Island (Swaraj Dweep). Afternoon relaxation and breathtaking sunset at world-famous Radhanagar Beach (Beach No. 7)."
+            },
+            {
+                "day": "Day 3",
+                "title": "Elephant Beach Coral Reef Snorkeling & Scuba",
+                "details": "Speedboat to Elephant Beach for vibrant coral reef snorkeling and scuba diving with certified PADI instructors. Afternoon kayak in mangroves."
+            },
+            {
+                "day": "Day 4",
+                "title": "Corbyn's Cove Beach & Departure",
+                "details": "Morning ferry back to Port Blair. Quick coconut water stop at palm-lined Corbyn's Cove. Transfer to Port Blair Airport."
+            }
+        ],
+        "pricing": {
+            "price_without_offers": 24800,
+            "price_with_offers": 18900,
+            "savings": 5900,
+            "discount_pct": 24,
+            "applied_promo": "ISLANDANDAMAN",
+            "promo_label": "Promo Code ISLANDANDAMAN Applied (Save ₹5,900)"
+        },
+        "inclusions": ["Return Flight Tickets", "Beachfront Resorts 3 Nights", "Daily Buffet Breakfast", "Makruzz High-Speed Ferry", "Airport & Jetty Transfers"],
+        "exclusions": ["Scuba diving video package", "Personal watercraft rental"]
     }
 ]
 

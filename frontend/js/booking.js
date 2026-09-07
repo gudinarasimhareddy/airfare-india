@@ -17,6 +17,9 @@ let bookingState = {
   flight: null,
   authoritativePrice: null,
   activeOrder: null,
+  createdBooking: null,
+  idempotencyKey: null,
+  additionalPassengers: [],
   addons: {
     digiyatra: false,
     insurance: false,
@@ -38,6 +41,150 @@ let bookingState = {
 };
 
 // =========================================================
+// MULTI-PASSENGER FORM CONTROLS (PHASE 5)
+// =========================================================
+function addPassengerFormRow() {
+  if (bookingState.additionalPassengers.length >= 8) {
+    showToast('Maximum 9 passengers allowed per booking.', false);
+    return;
+  }
+
+  const newIdx = bookingState.additionalPassengers.length + 2;
+  bookingState.additionalPassengers.push({
+    title: 'Mr',
+    first_name: '',
+    last_name: '',
+    age: 28,
+    gender: 'Male',
+    meal: 'Indian Vegetarian Thali'
+  });
+
+  renderAdditionalPassengers();
+  updatePaxCountBadge();
+  fetchAuthoritativeFare();
+}
+
+function removePassengerFormRow(idx) {
+  bookingState.additionalPassengers.splice(idx, 1);
+  renderAdditionalPassengers();
+  updatePaxCountBadge();
+  fetchAuthoritativeFare();
+}
+
+function updatePaxCountBadge() {
+  const totalPax = 1 + bookingState.additionalPassengers.length;
+  const badge = document.getElementById('paxCountBadge');
+  if (badge) badge.textContent = `${totalPax} Passenger${totalPax > 1 ? 's' : ''}`;
+  
+  const rightSummaryBadge = document.querySelector('.sticky-fare-summary .badge.blue');
+  if (rightSummaryBadge) rightSummaryBadge.textContent = `${totalPax} Passenger${totalPax > 1 ? 's' : ''}`;
+}
+
+function renderAdditionalPassengers() {
+  const container = document.getElementById('additionalPassengersContainer');
+  if (!container) return;
+
+  if (bookingState.additionalPassengers.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = bookingState.additionalPassengers.map((p, idx) => {
+    const pNum = idx + 2;
+    return `
+      <div class="additional-pax-card" style="padding:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="font-size:13px; font-weight:700; color:var(--brand-cyan);">Passenger ${pNum} (Adult)</div>
+          <button type="button" class="btn sm light" onclick="removePassengerFormRow(${idx})" style="color:var(--brand-rose); padding:2px 8px; font-size:11px;">✕ Remove</button>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="field-group">
+            <label>Title *</label>
+            <select id="paxTitle_${idx}" onchange="bookingState.additionalPassengers[${idx}].title = this.value">
+              <option value="Mr" ${p.title === 'Mr' ? 'selected' : ''}>Mr.</option>
+              <option value="Ms" ${p.title === 'Ms' ? 'selected' : ''}>Ms.</option>
+              <option value="Mrs" ${p.title === 'Mrs' ? 'selected' : ''}>Mrs.</option>
+              <option value="Dr" ${p.title === 'Dr' ? 'selected' : ''}>Dr.</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>First Name *</label>
+            <input type="text" id="paxFirstName_${idx}" placeholder="e.g. Priya" value="${p.first_name || ''}" oninput="bookingState.additionalPassengers[${idx}].first_name = this.value" required>
+          </div>
+          <div class="field-group">
+            <label>Last Name *</label>
+            <input type="text" id="paxLastName_${idx}" placeholder="e.g. Sharma" value="${p.last_name || ''}" oninput="bookingState.additionalPassengers[${idx}].last_name = this.value" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="field-group">
+            <label>Age *</label>
+            <input type="number" id="paxAge_${idx}" min="1" max="110" value="${p.age || 28}" oninput="bookingState.additionalPassengers[${idx}].age = parseInt(this.value) || 28" required>
+          </div>
+          <div class="field-group">
+            <label>Gender *</label>
+            <select id="paxGender_${idx}" onchange="bookingState.additionalPassengers[${idx}].gender = this.value">
+              <option value="Male" ${p.gender === 'Male' ? 'selected' : ''}>Male</option>
+              <option value="Female" ${p.gender === 'Female' ? 'selected' : ''}>Female</option>
+              <option value="Other" ${p.gender === 'Other' ? 'selected' : ''}>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function collectAllPassengers() {
+  const primaryTitle = document.getElementById('paxTitle')?.value || 'Mr';
+  const primaryFirst = document.getElementById('paxFirstName')?.value.trim() || 'Rajesh';
+  const primaryLast = document.getElementById('paxLastName')?.value.trim() || 'Sharma';
+  const primaryAge = parseInt(document.getElementById('paxAge')?.value) || 29;
+  const primaryEmail = document.getElementById('paxEmail')?.value.trim() || '';
+  const primaryPhone = document.getElementById('paxPhone')?.value.trim() || '';
+
+  const list = [
+    {
+      title: primaryTitle,
+      first_name: primaryFirst,
+      last_name: primaryLast,
+      age: primaryAge,
+      gender: bookingState.gender || 'Male',
+      email: primaryEmail,
+      phone: primaryPhone,
+      passenger_type: 'ADULT'
+    }
+  ];
+
+  bookingState.additionalPassengers.forEach((p, idx) => {
+    const fName = document.getElementById(`paxFirstName_${idx}`)?.value.trim() || p.first_name || `Guest${idx+2}`;
+    const lName = document.getElementById(`paxLastName_${idx}`)?.value.trim() || p.last_name || 'Traveler';
+    const ageVal = parseInt(document.getElementById(`paxAge_${idx}`)?.value) || p.age || 28;
+    const titleVal = document.getElementById(`paxTitle_${idx}`)?.value || p.title || 'Mr';
+    const genderVal = document.getElementById(`paxGender_${idx}`)?.value || p.gender || 'Male';
+
+    list.push({
+      title: titleVal,
+      first_name: fName,
+      last_name: lName,
+      age: ageVal,
+      gender: genderVal,
+      passenger_type: ageVal < 12 ? 'CHILD' : 'ADULT'
+    });
+  });
+
+  return list;
+}
+
+function selectGender(el) {
+  document.querySelectorAll('.radio-pill-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  bookingState.gender = el.dataset.gender || 'Male';
+}
+
+// =========================================================
 // INITIALIZATION
 // =========================================================
 document.addEventListener('DOMContentLoaded', async () => {
@@ -46,7 +193,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   startQrTimer();
   await fetchAuthoritativeFare();
   await fetchGoogleFlightsIntelligence();
+
+  if (window.auth) {
+    window.auth.onAuthStateChange((user) => {
+      if (user) autoFillAuthenticatedProfile(user);
+    });
+  }
 });
+
+function autoFillAuthenticatedProfile(user) {
+  if (!user) return;
+  const meta = user.user_metadata || {};
+  const fullName = meta.full_name || meta.name || '';
+  if (fullName) {
+    const parts = fullName.split(' ');
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join(' ') || '';
+    const firstInput = document.getElementById('paxFirstName');
+    const lastInput = document.getElementById('paxLastName');
+    if (firstInput && (!firstInput.value || firstInput.value === 'Rajesh')) firstInput.value = firstName;
+    if (lastInput && (!lastInput.value || lastInput.value === 'Sharma')) lastInput.value = lastName;
+  }
+  const emailInput = document.getElementById('paxEmail');
+  if (emailInput && (!emailInput.value || emailInput.value === 'rajesh.sharma@example.com') && user.email) {
+    emailInput.value = user.email;
+  }
+  const phone = meta.phone || user.phone;
+  const phoneInput = document.getElementById('paxPhone');
+  if (phoneInput && phone && (!phoneInput.value || phoneInput.value === '9876543210')) {
+    phoneInput.value = phone.replace('+91', '').trim();
+  }
+}
 
 function initBookingTheme() {
   const savedTheme = localStorage.getItem('airfarex_theme') || 'aurora';
@@ -191,6 +368,8 @@ async function fetchAuthoritativeFare() {
   if (bookingState.addons.insurance) selectedAddons.push('insurance');
   if (bookingState.addons.baggage) selectedAddons.push('baggage');
 
+  const paxCount = 1 + (bookingState.additionalPassengers ? bookingState.additionalPassengers.length : 0);
+
   const payload = {
     booking_type: 'flight',
     flight_no: f.flight_no,
@@ -198,7 +377,7 @@ async function fetchAuthoritativeFare() {
     destination_code: f.destination_code,
     cabin: f.cabin || 'Economy',
     travel_date: f.travel_date,
-    pax_count: 1,
+    pax_count: paxCount,
     promo_code: bookingState.couponCode || null,
     addons: selectedAddons,
     payment_method: bookingState.paymentMethod
@@ -416,7 +595,7 @@ function startQrTimer() {
 }
 
 // =========================================================
-// CHECKOUT & PAYMENT EXECUTION CONTROLLER (CRITICAL ISSUE #1, #2, #14)
+// CHECKOUT & PAYMENT EXECUTION CONTROLLER (PHASE 5)
 // =========================================================
 async function submitBookingCheckout() {
   const firstName = document.getElementById('paxFirstName')?.value.trim();
@@ -424,7 +603,6 @@ async function submitBookingCheckout() {
   const email = document.getElementById('paxEmail')?.value.trim();
   const phone = document.getElementById('paxPhone')?.value.trim();
   const title = document.getElementById('paxTitle')?.value || 'Mr';
-  const meal = document.getElementById('paxMeal')?.value || 'Indian Vegetarian Thali';
   const gstin = document.getElementById('gstNumber')?.value.trim() || null;
   const company = document.getElementById('gstCompanyName')?.value.trim() || null;
 
@@ -457,33 +635,50 @@ async function submitBookingCheckout() {
   if (bookingState.addons.insurance) selectedAddons.push('insurance');
   if (bookingState.addons.baggage) selectedAddons.push('baggage');
 
-  const orderPayload = {
-    booking_type: 'flight',
+  const allPassengers = collectAllPassengers();
+
+  // Create or reuse idempotency key
+  if (!bookingState.idempotencyKey) {
+    bookingState.idempotencyKey = 'idemp_' + Math.random().toString(36).substring(2, 12);
+  }
+
+  const bookingPayload = {
     flight_no: f.flight_no,
+    booking_type: 'flight',
     origin_code: f.origin_code,
     destination_code: f.destination_code,
     cabin: f.cabin || 'Economy',
     travel_date: f.travel_date,
-    traveler_name: `${title}. ${firstName} ${lastName}`,
-    email: email,
-    phone: phone,
-    pax_count: 1,
-    promo_code: bookingState.couponCode || null,
+    contact_name: `${title}. ${firstName} ${lastName}`,
+    contact_email: email,
+    contact_phone: phone,
+    passengers: allPassengers,
     addons: selectedAddons,
+    promo_code: bookingState.couponCode || null,
+    expected_price: bookingState.authoritativePrice.final_payable_amount,
+    idempotency_key: bookingState.idempotencyKey,
     payment_method: bookingState.paymentMethod,
     gstin: gstin,
-    company_name: company,
-    meal_preference: meal,
-    gender: bookingState.gender
+    company_name: company
   };
 
-  // STEP 3: Payment Order Initiation
+  // STEP 3: Booking & Payment Order Initiation
   document.getElementById('step3Indicator')?.classList.add('active');
   document.getElementById('stepDiv2')?.classList.add('active');
-  showToast('Creating secure payment order with backend gateway...', true);
+  showToast('Creating booking with backend server-authoritative price...', true);
 
   try {
-    const orderData = await window.api.createPaymentOrder(orderPayload);
+    const bookingRes = await window.api.createBooking(bookingPayload);
+    bookingState.createdBooking = bookingRes;
+
+    const orderData = {
+      order_id: bookingRes.payment_order_id,
+      booking_id: bookingRes.booking_id,
+      amount_inr: bookingRes.pricing ? bookingRes.pricing.final_payable_amount : bookingState.authoritativePrice.final_payable_amount,
+      amount_paise: (bookingRes.pricing ? bookingRes.pricing.final_payable_amount : bookingState.authoritativePrice.final_payable_amount) * 100,
+      is_sandbox: bookingRes.is_sandbox !== false,
+      key_id: 'rzp_test_airfarex_sandbox'
+    };
     bookingState.activeOrder = orderData;
 
     if (orderData.is_sandbox) {
@@ -491,11 +686,17 @@ async function submitBookingCheckout() {
       openSandboxPaymentModal(orderData);
     } else {
       // Official Razorpay Gateway Mode
-      openRazorpayGateway(orderData, orderPayload);
+      openRazorpayGateway(orderData, bookingPayload);
     }
   } catch (err) {
-    console.error('Failed to create payment order:', err);
-    showToast(`Order creation failed: ${err.message || err}`, false);
+    console.error('Failed to create booking:', err);
+    if (err.error_code === 'PRICE_CHANGED' || err.detail?.error_code === 'PRICE_CHANGED') {
+      const pInfo = err.detail || err;
+      showToast(`⚠️ Flight price updated from ₹${pInfo.old_price} to ₹${pInfo.new_price}. Recalculating...`, false);
+      await fetchAuthoritativeFare();
+    } else {
+      showToast(`Booking creation failed: ${err.message || (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail))}`, false);
+    }
   }
 }
 
@@ -708,31 +909,32 @@ function renderConfirmedTicket(data) {
   if (pmEl) pmEl.textContent = bookingState.paymentMethod === 'card' ? 'Credit / Debit Card' : `UPI (${bookingState.upiApp})`;
 
   const f = bookingState.flight;
+  const quote = bookingState.authoritativePrice;
+  const finalAmt = quote ? quote.final_payable_amount : (data.amount_inr || 4240);
 
-  // Fill in Ticket details
+  // Fill in confirmation details
   document.getElementById('confSentEmail') && (document.getElementById('confSentEmail').textContent = data.email);
   document.getElementById('confSentPhone') && (document.getElementById('confSentPhone').textContent = `+91 ${data.phone || '9876543210'}`);
   document.getElementById('confAirlineHeader') && (document.getElementById('confAirlineHeader').textContent = f?.airline || 'IndiGo');
-  document.getElementById('confEticketNo') && (document.getElementById('confEticketNo').textContent = data.eticket_number || `098-${Math.floor(1000000000 + Math.random() * 9000000000)}`);
   document.getElementById('confPnr') && (document.getElementById('confPnr').textContent = data.pnr);
   document.getElementById('confUtr') && (document.getElementById('confUtr').textContent = data.payment_id);
+  document.getElementById('confSectorDisplay') && (document.getElementById('confSectorDisplay').textContent = `${f?.origin_code || 'HYD'} ➔ ${f?.destination_code || 'DEL'}`);
+  document.getElementById('confAmountDisplay') && (document.getElementById('confAmountDisplay').textContent = `₹${finalAmt.toLocaleString('en-IN')}`);
 
   document.getElementById('confPaxName') && (document.getElementById('confPaxName').textContent = data.traveler_name.toUpperCase());
   document.getElementById('confFlightDetails') && (document.getElementById('confFlightDetails').textContent = `${f?.flight_no || '6E-205'} (${f?.aircraft || 'A320neo'})`);
   document.getElementById('confSeatNo') && (document.getElementById('confSeatNo').textContent = `${data.seat_number} (${data.seat_number?.endsWith('A') || data.seat_number?.endsWith('F') ? 'Window' : 'Aisle'})`);
-  document.getElementById('confGateTerminal') && (document.getElementById('confGateTerminal').textContent = `Gate ${f?.gate || 'G12'} · ${f?.terminal || 'T2'}`);
+  document.getElementById('confGateTerminal') && (document.getElementById('confGateTerminal').textContent = `Sandbox / Verified`);
 
   document.getElementById('confOrigin') && (document.getElementById('confOrigin').textContent = `${f?.origin_code || 'HYD'} (${f?.origin_city || 'Hyderabad'})`);
   document.getElementById('confDest') && (document.getElementById('confDest').textContent = `${f?.destination_code || 'DEL'} (${f?.destination_city || 'Delhi'})`);
   document.getElementById('confDepTime') && (document.getElementById('confDepTime').textContent = `${f?.dep_time || '07:15 AM'} · ${data.travel_date}`);
   document.getElementById('confBaggage') && (document.getElementById('confBaggage').textContent = f?.baggage || '15kg Check-in + 7kg Cabin');
 
-  // Barcode text
-  const cleanName = data.traveler_name.replace(/[^a-zA-Z]/g, '').slice(0, 10).toUpperCase();
-  document.getElementById('confBarcodeText') && (document.getElementById('confBarcodeText').textContent = `M1${cleanName} ${(f?.flight_no || '6E205').replace('-', '')} ${f?.origin_code || 'HYD'}${f?.destination_code || 'DEL'} ETKT${data.eticket_number || '0988492019'}`);
+  // Booking Reference
+  document.getElementById('confBookingRef') && (document.getElementById('confBookingRef').textContent = data.booking_reference || bookingState.createdBooking?.booking_reference || 'AXI7K29P');
 
   // Tax Invoice Section with Booking ID and Payment ID
-  const quote = bookingState.authoritativePrice;
   document.getElementById('confInvoiceNo') && (document.getElementById('confInvoiceNo').textContent = data.invoice_number || `INV-2026-AIRX-${data.booking_id.slice(-4)}`);
   document.getElementById('confBookingId') && (document.getElementById('confBookingId').textContent = data.booking_id);
   document.getElementById('confPaymentId') && (document.getElementById('confPaymentId').textContent = data.payment_id);
@@ -743,7 +945,7 @@ function renderConfirmedTicket(data) {
     document.getElementById('confGstVal') && (document.getElementById('confGstVal').textContent = `₹${quote.total_gst.toLocaleString('en-IN')}`);
     document.getElementById('confTotalPaid') && (document.getElementById('confTotalPaid').textContent = `₹${quote.final_payable_amount.toLocaleString('en-IN')}`);
   } else {
-    document.getElementById('confTotalPaid') && (document.getElementById('confTotalPaid').textContent = `₹${data.amount_inr.toLocaleString('en-IN')}`);
+    document.getElementById('confTotalPaid') && (document.getElementById('confTotalPaid').textContent = `₹${finalAmt.toLocaleString('en-IN')}`);
   }
 
   // Scroll to top
@@ -821,6 +1023,7 @@ function downloadInvoiceSummary() {
     sac_code: "9964",
     invoice_number: booking.invoice_number || `INV-2026-AIRX-${booking.booking_id.slice(-4)}`,
     booking_id: booking.booking_id,
+    booking_reference: booking.booking_reference || bookingState.createdBooking?.booking_reference || "AXI7K29P",
     payment_id: booking.payment_id,
     pnr: booking.pnr,
     traveler_name: booking.traveler_name,
@@ -828,6 +1031,7 @@ function downloadInvoiceSummary() {
     travel_date: booking.travel_date,
     amount_paid_inr: booking.amount_inr,
     status: "CONFIRMED_AND_VERIFIED",
+    development_notice: "Development booking — airline ticket issuance is not connected in this environment.",
     issued_at: new Date().toISOString()
   };
 
@@ -856,3 +1060,7 @@ window.authorizePaymentFailure = authorizePaymentFailure;
 window.retryBookingPayment = retryBookingPayment;
 window.changePaymentMethod = changePaymentMethod;
 window.downloadInvoiceSummary = downloadInvoiceSummary;
+window.addPassengerFormRow = addPassengerFormRow;
+window.removePassengerFormRow = removePassengerFormRow;
+window.selectGender = selectGender;
+

@@ -54,7 +54,15 @@ def predict_price(
         ("BOM", "GOI"): 3400,
         ("GOI", "BOM"): 3400,
         ("CCU", "DEL"): 5900,
-        ("DEL", "CCU"): 5900
+        ("DEL", "CCU"): 5900,
+        ("BOM", "BLR"): 3680,
+        ("BLR", "BOM"): 3650,
+        ("DEL", "GOI"): 5800,
+        ("GOI", "DEL"): 5800,
+        ("BOM", "HYD"): 3350,
+        ("HYD", "BOM"): 3540,
+        ("BLR", "MAA"): 2850,
+        ("MAA", "BLR"): 2790
     }
 
     current_fare = base_fares.get((clean_from, clean_to), 5240)

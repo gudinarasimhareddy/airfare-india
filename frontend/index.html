@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,20 +21,20 @@
   <div class="sys-banner" id="customerTrustBanner">
     <div class="sys-banner-left">
       <span class="live-badge">VERIFIED TRAVEL PORTAL</span>
-      <span>🔒 100% Secure UPI & Card Payments</span>
+      <span>🔒 Secure payment options</span>
       <span class="banner-sep">·</span>
-      <span>🏛️ DGCA Statutory Refund Guarantee</span>
+      <span>🏛️ DGCA refund rules</span>
       <span class="banner-sep">·</span>
-      <span>⚡ Zero Convenience Fee on UPI</span>
+      <span>⚡ UPI, Cards & Net Banking</span>
       <span class="banner-sep">·</span>
-      <span>✈️ 1M+ Domestic Fares Analyzed</span>
+      <span>✈️ Domestic flight search</span>
     </div>
     <div class="sys-banner-right">
-      <span style="color:var(--text-muted); font-size:11.5px; display:inline-flex; align-items:center; gap:5px;">
+      <span style="color:#94A3B8; font-size:11.5px; display:inline-flex; align-items:center; gap:5px;">
         <span>📞</span> 24x7 Traveler Support
       </span>
-      <button class="admin-portal-link" onclick="showTab('admin', document.querySelector('.main-nav a[data-tab=\'admin\']'))" title="Open Engineering, Economic Analytics & API Console">
-        <span>⚙️ Admin & Analytics Portal ↗</span>
+      <button class="admin-portal-link" onclick="showTab('admin', document.querySelector('[data-tab=\'admin\']'))" title="Open Engineering, Economic Analytics & API Console">
+        <span>⚙️ Developer Portal ↗</span>
       </button>
     </div>
   </div>
@@ -49,22 +49,84 @@
       </div>
     </div>
 
-    <nav class="main-nav">
-      <a class="nav-link active" data-tab="home" onclick="showTab('home', this)">✈️ Flights</a>
-      <a class="nav-link" data-tab="tourist-plans" onclick="showTab('tourist-plans', this)">🌴 Packages</a>
-      <a class="nav-link" data-tab="explorer" onclick="showTab('explorer', this)">🔍 Flight Explorer</a>
-      <a class="nav-link" data-tab="comparison" onclick="showTab('comparison', this)">⚖️ Compare Airlines</a>
-      <a class="nav-link" data-tab="monthly-fares" onclick="showTab('monthly-fares', this)">📅 Low Fares</a>
-      <a class="nav-link" data-tab="offers" onclick="showTab('offers', this)">🏷️ Deals</a>
-      <a class="nav-link" data-tab="prediction" onclick="showTab('prediction', this)">🔮 Forecast</a>
-      <a class="nav-link" data-tab="refunds" onclick="showTab('refunds', this)">💳 Refund Tracker</a>
-      <a class="nav-link" data-tab="saved" onclick="showTab('saved', this)">🔔 My Trips</a>
-      <a class="nav-link nav-admin-link" data-tab="admin" onclick="showTab('admin', this)">⚙️ Admin & Analytics</a>
+    <!-- Grouped Main Navigation -->
+    <nav class="main-nav" id="mainNav">
+      <a class="nav-link active" data-tab="home" onclick="showTab('home', this)">✈️ Home</a>
+
+      <!-- Flights Dropdown -->
+      <div class="nav-item">
+        <button class="nav-link" type="button">
+          <span>Flights</span> <span class="caret">▼</span>
+        </button>
+        <div class="nav-dropdown">
+          <a class="dropdown-link" data-tab="explorer" onclick="showTab('explorer', this)">
+            <span>🔍 Search Flights</span>
+            <span class="item-badge">Live</span>
+          </a>
+          <a class="dropdown-link" data-tab="comparison" onclick="showTab('comparison', this)">
+            <span>⚖️ Compare Airlines</span>
+          </a>
+          <a class="dropdown-link" data-tab="monthly-fares" onclick="showTab('monthly-fares', this)">
+            <span>📅 Monthly Low Fares</span>
+          </a>
+          <a class="dropdown-link" onclick="showAdminSubtab('routes')">
+            <span>🗺️ Route Intelligence</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Trips Dropdown -->
+      <div class="nav-item">
+        <button class="nav-link" type="button">
+          <span>Trips</span> <span class="caret">▼</span>
+        </button>
+        <div class="nav-dropdown">
+          <a class="dropdown-link" data-tab="trips" onclick="showTab('trips', this)">
+            <span>🧳 My Bookings</span>
+            <span class="item-badge" style="background:var(--brand-cyan, #0284c7); color:#fff;">Live</span>
+          </a>
+          <a class="dropdown-link" data-tab="tourist-plans" onclick="showTab('tourist-plans', this)">
+            <span>🌴 Tourist Packages</span>
+            <span class="item-badge">Bundled</span>
+          </a>
+          <a class="dropdown-link" data-tab="offers" onclick="showTab('offers', this)">
+            <span>🏷️ Deals & Offers</span>
+          </a>
+          <a class="dropdown-link" data-tab="saved" onclick="showTab('saved', this)">
+            <span>🔔 Saved Flights & Alerts</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Smart Tools Dropdown -->
+      <div class="nav-item">
+        <button class="nav-link" type="button">
+          <span>Smart Tools</span> <span class="caret">▼</span>
+        </button>
+        <div class="nav-dropdown">
+          <a class="dropdown-link" data-tab="prediction" onclick="showTab('prediction', this)">
+            <span>🔮 Price Predictor</span>
+          </a>
+          <a class="dropdown-link" data-tab="refunds" onclick="showTab('refunds', this)">
+            <span>💳 Refund Tracker</span>
+          </a>
+          <a class="dropdown-link" onclick="toggleAiAssistant()">
+            <span>🤖 AI Travel Assistant</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Developer / Research -->
+      <div class="nav-item">
+        <a class="nav-link nav-admin-link" data-tab="admin" onclick="showTab('admin', this)">
+          <span>⚙️ Research & APIx</span>
+        </a>
+      </div>
     </nav>
 
     <div class="top-actions">
       <!-- Regional Language Selector -->
-      <select id="langSelector" class="lang-selector" onchange="window.i18n?.setLanguage(this.value)" title="Select Regional Language">
+      <select id="langSelector" class="lang-selector" onchange="window.i18n?.setLanguage(this.value)" title="Select Regional Language" aria-label="Select Language">
         <option value="en">🌐 English</option>
         <option value="hi">🇮🇳 हिन्दी</option>
         <option value="te">🇮🇳 తెలుగు</option>
@@ -74,24 +136,71 @@
       </select>
 
       <!-- Multi-Theme Selector Dropdown -->
-      <select id="themeSelector" class="lang-selector" onchange="setThemeMode(this.value)" title="Choose Visual Theme">
+      <select id="themeSelector" class="lang-selector" onchange="setThemeMode(this.value)" title="Choose Visual Theme" aria-label="Visual Theme">
+        <option value="light" selected>☀️ Aviation Light</option>
         <option value="aurora">🌌 Aurora Obsidian</option>
-        <option value="cyber">⚡ Cyber Neon</option>
         <option value="sunset">🌅 Sunset Gold</option>
-        <option value="light">☁️ Frosted Alabaster</option>
+        <option value="cyber">⚡ Cyber Neon</option>
       </select>
 
-      <button class="btn sm light" onclick="showToast('Welcome back, Deepak! Your travel profile is active.')" title="Customer Profile" style="display:inline-flex; align-items:center; gap:6px;">
-        <span>👤</span> <span>Account</span>
-      </button>
+      <!-- Dynamic Customer Profile / Authentication Widget -->
+      <div id="userNavWidget" style="display:inline-flex; align-items:center;">
+        <button class="btn sm primary" onclick="openAuthModal('login')" title="Customer Account Login / Sign Up" style="display:inline-flex; align-items:center; gap:6px;">
+          <span>👤</span> <span>Sign In</span>
+        </button>
+      </div>
+
+      <!-- Mobile Menu Toggle Button -->
+      <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileMenu()" title="Open Navigation Menu" aria-label="Open Navigation Menu">☰</button>
     </div>
   </header>
+
+  <!-- Mobile Navigation Drawer -->
+  <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop" onclick="toggleMobileMenu()"></div>
+  <div class="mobile-drawer" id="mobileDrawer">
+    <div class="mobile-drawer-head">
+      <div class="brand-wrapper" onclick="showTab('home'); toggleMobileMenu();">
+        <div class="brand-logo-icon">✈</div>
+        <div>
+          <div class="brand-text">Airfare<span>X</span></div>
+          <span class="brand-sub">India Travel</span>
+        </div>
+      </div>
+      <button class="mobile-drawer-close" onclick="toggleMobileMenu()" aria-label="Close menu">✕</button>
+    </div>
+
+    <!-- Mobile Drawer Auth Container -->
+    <div id="mobileDrawerAuth" style="padding:0 16px 8px 16px;"></div>
+
+    <div class="mobile-nav-section-title">Home</div>
+    <a class="mobile-drawer-link active" data-tab="home" onclick="showTab('home'); toggleMobileMenu();">🏠 Home</a>
+
+    <div class="mobile-nav-section-title">Flights</div>
+    <a class="mobile-drawer-link" data-tab="explorer" onclick="showTab('explorer'); toggleMobileMenu();">🔍 Search Flights</a>
+    <a class="mobile-drawer-link" data-tab="comparison" onclick="showTab('comparison'); toggleMobileMenu();">⚖️ Compare Airlines</a>
+    <a class="mobile-drawer-link" data-tab="monthly-fares" onclick="showTab('monthly-fares'); toggleMobileMenu();">📅 Monthly Low Fares</a>
+    <a class="mobile-drawer-link" onclick="showAdminSubtab('routes'); toggleMobileMenu();">🗺️ Route Intelligence</a>
+
+    <div class="mobile-nav-section-title">Trips</div>
+    <a class="mobile-drawer-link" data-tab="trips" onclick="showTab('trips'); toggleMobileMenu();">🧳 My Bookings</a>
+    <a class="mobile-drawer-link" data-tab="tourist-plans" onclick="showTab('tourist-plans'); toggleMobileMenu();">🌴 Tourist Packages</a>
+    <a class="mobile-drawer-link" data-tab="offers" onclick="showTab('offers'); toggleMobileMenu();">🏷️ Deals & Offers</a>
+    <a class="mobile-drawer-link" data-tab="saved" onclick="showTab('saved'); toggleMobileMenu();">🔔 Saved Flights & Alerts</a>
+
+    <div class="mobile-nav-section-title">Smart Tools</div>
+    <a class="mobile-drawer-link" data-tab="prediction" onclick="showTab('prediction'); toggleMobileMenu();">🔮 Price Predictor</a>
+    <a class="mobile-drawer-link" data-tab="refunds" onclick="showTab('refunds'); toggleMobileMenu();">💳 Refund Tracker</a>
+    <a class="mobile-drawer-link" onclick="toggleAiAssistant(); toggleMobileMenu();">🤖 AI Travel Assistant</a>
+
+    <div class="mobile-nav-section-title">Developer / Research</div>
+    <a class="mobile-drawer-link" data-tab="admin" onclick="showTab('admin'); toggleMobileMenu();">⚙️ APIx Index & Analytics</a>
+  </div>
 
   <!-- Main Container -->
   <main class="main-container">
 
     <!-- =========================================================
-         SECTION 1: OVERVIEW & INSTANT COMPARISON
+         SECTION 1: OVERVIEW & FEATURED FLIGHT DISCOVERY
          ========================================================= -->
     <section id="home">
       <!-- Hero Banner with Human-First Travel Search -->
@@ -100,11 +209,11 @@
         <div class="hero-overlay"></div>
         <div class="hero-content">
           <div class="hero-top-badges">
-            <span class="hero-pill green">● AI TRAVEL ASSISTANT & BEST VALUE GUARANTEE</span>
+            <span class="hero-pill green">● AVIATION INTELLIGENCE &amp; FLIGHT SEARCH</span>
             <span class="hero-pill">🇮🇳 ALL INDIAN DOMESTIC AIRLINES INCLUDED</span>
           </div>
-          <h1>Travel smarter. Pay less.</h1>
-          <p class="hero-subtext">AI-powered flights, stays and travel packages — personalized for your trip.</p>
+          <h1>Smarter Flights. Better Prices. Less Guesswork.</h1>
+          <p class="hero-subtext">Travel smarter with aviation intelligence. Search flights. Understand prices. Compare options. Let AirfareX help you decide.</p>
 
           <!-- Human-First Travel Booking Card -->
           <div class="search-card-container">
@@ -118,13 +227,13 @@
             <!-- Glassmorphic Search Fields Grid -->
             <div class="search-bar">
               <div class="field">
-                <label data-i18n="from_label">FROM (ORIGIN)</label>
-                <input id="fromCity" list="originAirports" value="Hyderabad (HYD)" oninput="handleHomePlaceChange()" onchange="handleHomePlaceChange()" placeholder="City or airport">
+                <label data-i18n="from_label">From</label>
+                <input id="fromCity" list="originAirports" value="Delhi (DEL)" oninput="handleHomePlaceChange()" onchange="handleHomePlaceChange()" placeholder="City or airport">
                 <datalist id="originAirports">
-                  <option value="Hyderabad (HYD)">
                   <option value="Delhi (DEL)">
                   <option value="Mumbai (BOM)">
                   <option value="Bengaluru (BLR)">
+                  <option value="Hyderabad (HYD)">
                   <option value="Chennai (MAA)">
                   <option value="Kolkata (CCU)">
                   <option value="Goa (GOI)">
@@ -134,14 +243,14 @@
               </div>
 
               <!-- Swap Airports Button -->
-              <button type="button" class="airport-swap-btn" onclick="swapOriginDest()" title="Swap Cities">⇄</button>
+              <button type="button" class="airport-swap-btn" id="swapAirportsBtn" onclick="swapOriginDest()" title="Swap origin and destination" aria-label="Swap origin and destination">⇄</button>
 
               <div class="field">
-                <label data-i18n="to_label">TO (DESTINATION)</label>
-                <input id="toCity" list="destAirports" value="Delhi (DEL)" oninput="handleHomePlaceChange()" onchange="handleHomePlaceChange()" placeholder="City or airport">
+                <label data-i18n="to_label">To</label>
+                <input id="toCity" list="destAirports" value="Mumbai (BOM)" oninput="handleHomePlaceChange()" onchange="handleHomePlaceChange()" placeholder="City or airport">
                 <datalist id="destAirports">
-                  <option value="Delhi (DEL)">
                   <option value="Mumbai (BOM)">
+                  <option value="Delhi (DEL)">
                   <option value="Bengaluru (BLR)">
                   <option value="Hyderabad (HYD)">
                   <option value="Chennai (MAA)">
@@ -153,17 +262,17 @@
               </div>
 
               <div class="field">
-                <label data-i18n="depart_label">DEPARTURE DATE</label>
+                <label data-i18n="depart_label">Departure Date</label>
                 <input type="date" id="departDate">
               </div>
 
               <div class="field" id="returnDateFieldWrap" style="opacity: 0.5;">
-                <label>RETURN DATE</label>
+                <label>Return Date</label>
                 <input type="date" id="returnDate" placeholder="Add Return" onchange="enableRoundTrip()">
               </div>
 
               <div class="field">
-                <label data-i18n="travellers_label">TRAVELERS & CABIN</label>
+                <label data-i18n="travellers_label">Travelers &amp; Cabin</label>
                 <select id="cabinSelect">
                   <option data-i18n="cabin_1_eco">1 Adult · Economy</option>
                   <option data-i18n="cabin_2_eco">2 Adults · Economy</option>
@@ -172,10 +281,32 @@
                 </select>
               </div>
 
-              <div class="search-actions-col">
-                <button class="btn green search-cta-btn" onclick="triggerSearch()" data-i18n="search_btn">
+              <div class="search-actions-col" style="display:flex; flex-direction:column; gap:6px;">
+                <button class="btn green search-cta-btn" id="heroSearchBtn" onclick="triggerHomeOrExplorerSearch()" data-i18n="search_btn">
                   <span>🔍</span> <span>Search Flights</span>
                 </button>
+                <button type="button" class="btn-demo-cta" onclick="exploreDemoFlights()" title="Explore all 20+ master demo flights with complete score breakdown">
+                  <span>⚡</span> <span>Try Demo Search (20+ Flights)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Natural Language AI Search Input (Phase 7 / 8) -->
+            <div class="nl-ai-search-box">
+              <div class="nl-ai-search-inner">
+                <span class="nl-ai-icon">✨</span>
+                <input type="text" id="heroNlSearchInput" placeholder="Try: cheapest non-stop flight from Hyderabad to Delhi" onkeydown="if(event.key==='Enter') executeNlSearch('heroNlSearchInput')">
+                <button type="button" class="btn green sm nl-ai-btn" id="heroAskAiBtn" onclick="executeNlSearch('heroNlSearchInput')">
+                  <span>Ask AirfareX</span> <span>⚡</span>
+                </button>
+              </div>
+              <div class="nl-ai-hints">
+                <span>💡 Try demo routes:</span>
+                <a href="javascript:void(0)" onclick="selectDemoRoute('HYD', 'DEL')">⚡ Hyderabad ➔ Delhi</a>
+                <a href="javascript:void(0)" onclick="selectDemoRoute('HYD', 'BOM')">⚡ Hyderabad ➔ Mumbai</a>
+                <a href="javascript:void(0)" onclick="selectDemoRoute('BLR', 'DEL')">⚡ Bengaluru ➔ Delhi</a>
+                <a href="javascript:void(0)" onclick="selectDemoRoute('BOM', 'DEL')">⚡ Mumbai ➔ Delhi</a>
+                <a href="javascript:void(0)" onclick="exploreDemoFlights()">🌐 View All 20+ Demo Flights</a>
               </div>
             </div>
 
@@ -183,25 +314,26 @@
             <div class="trust-signals-bar">
               <div class="trust-signal-item">
                 <span class="trust-icon">🔒</span>
-                <span><b>100% Secure Payments</b> (UPI, Cards & Net Banking)</span>
+                <span><b>Secure payment options</b> (UPI, Cards &amp; Net Banking)</span>
               </div>
               <div class="trust-signal-item">
                 <span class="trust-icon">✓</span>
-                <span><b>Transparent Pricing</b> — Zero Hidden Fees</span>
+                <span><b>Transparent pricing</b> — All fares &amp; taxes shown</span>
               </div>
               <div class="trust-signal-item">
                 <span class="trust-icon">🏛️</span>
-                <span><b>DGCA Statutory Protection</b> (24h Free Cancellation)</span>
+                <span><b>DGCA refund guidelines</b> (Cancellation rules apply)</span>
               </div>
               <div class="trust-signal-item">
                 <span class="trust-icon">🤖</span>
-                <span><b>AI Best-Value Engine</b> (Save up to ₹2,500)</span>
+                <span><b>Flight comparison</b> — Domestic airline fares</span>
               </div>
             </div>
           </div>
 
           <!-- Quick Filters Chips -->
           <div class="chips-bar">
+            <button class="chip active" onclick="exploreDemoFlights()" style="background:linear-gradient(135deg, #10b98122, #0284c722); border-color:var(--brand-cyan); color:var(--text-main); font-weight:700;">⚡ Explore 20+ Demo Flights</button>
             <button class="chip" onclick="showTab('tourist-plans', document.querySelector('.main-nav a[data-tab=\'tourist-plans\']'))">🌴 Curated Packages</button>
             <button class="chip" onclick="flexDates()" data-i18n="chip_flex">📅 Flexible dates</button>
             <button class="chip" onclick="everywhere()" data-i18n="chip_everywhere">🌍 Explore everywhere</button>
@@ -214,39 +346,82 @@
         </div>
       </div>
 
-      <!-- AirfareX AI Recommendation & Travel Assistant Pick (Issue #3 & #7) -->
+      <!-- =========================================================
+           FEATURED FLIGHT RESULTS / TODAY'S DEALS (DEL -> BOM DEMO)
+           ========================================================= -->
+      <div class="home-featured-section" id="homeFeaturedSection">
+        <div class="home-featured-header">
+          <div>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:4px;">
+              <span class="instant-route-badge" id="homeFeaturedRouteBadge">✈ DEL ➔ BOM · Today's Flight Deals</span>
+              <span id="homeFeaturedDataSourceBadge" class="data-source-pill badge-dev">DEMO ACTIVE</span>
+            </div>
+            <h2 style="font-size:22px; font-weight:800; margin:0 0 4px; color:var(--text-main);">Featured Flights &amp; Live Schedules</h2>
+            <p class="metric-sub" id="homeFeaturedSubtitle" style="margin:0;">Real-time scheduled departures with server-authoritative fare breakdowns, seat availability, and AI scoring.</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button class="btn-demo-cta" onclick="exploreDemoFlights()" style="font-size:12px; padding:6px 14px;">⚡ Explore 20+ Demo Flights</button>
+            <button class="btn sm" onclick="showTab('explorer', document.querySelector('.main-nav a[data-tab=\'explorer\']'))">Open Full Explorer ➔</button>
+            <button class="btn sm light" onclick="loadHomepageFeaturedFlights('DEL', 'BOM')">🔄 Refresh Fares</button>
+          </div>
+        </div>
+
+        <!-- AI 4-Card Recommendation Summary Bar -->
+        <div class="home-ai-summary-grid" id="homeAiSummaryGrid">
+          <!-- Populated dynamically by JS -->
+        </div>
+
+        <!-- Flight Result Cards Container -->
+        <div id="homeFlightResults" style="margin-top:16px;">
+          <!-- Populated dynamically by loadHomepageFeaturedFlights() -->
+          <div class="skeleton-card">
+            <div class="skeleton-shimmer"></div>
+            <div class="skeleton-line lg" style="width:32%;"></div>
+            <div class="skeleton-line md" style="width:65%;"></div>
+            <div class="skeleton-line sm" style="width:40%;"></div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-shimmer"></div>
+            <div class="skeleton-line lg" style="width:28%;"></div>
+            <div class="skeleton-line md" style="width:58%;"></div>
+            <div class="skeleton-line sm" style="width:45%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AirfareX AI Recommendation & Travel Assistant Pick Card -->
       <div class="ai-recommendation-hero-card" id="aiHeroPickCard">
         <div class="ai-pick-header">
           <div class="ai-pick-tag">
             <span class="ai-robot-badge">🤖</span>
             <div>
               <span class="ai-pick-label">AirfareX AI Recommends</span>
-              <h3 class="ai-pick-title" id="aiPickFlightTitle">IndiGo 6E 2341 · 06:30 DEL ➔ 09:10 BLR</h3>
+              <h3 class="ai-pick-title" id="aiPickFlightTitle">IndiGo 6E 204 · 06:10 DEL ➔ 08:20 BOM</h3>
             </div>
           </div>
           <div class="ai-pick-price-box">
             <span class="ai-pick-fare-label">Authoritative Fare</span>
-            <span class="ai-pick-fare" id="aiPickFare">₹5,240</span>
-            <span class="ai-pick-tagline">Statutory Taxes & Cabin Bag Included</span>
+            <span class="ai-pick-fare" id="aiPickFare">₹3,980</span>
+            <span class="ai-pick-tagline">Statutory Taxes &amp; Cabin Bag Included</span>
           </div>
         </div>
 
         <div class="ai-reasons-grid">
           <div class="ai-reason-item">
             <span class="check-icon">✓</span>
-            <div><b>₹1,840 cheaper</b> than 7-day average route fare</div>
+            <div><b>₹1,420 cheaper</b> than 7-day average sector benchmark</div>
           </div>
           <div class="ai-reason-item">
             <span class="check-icon">✓</span>
-            <div><b>Non-stop direct</b> flight (2h 40m total duration)</div>
+            <div><b>Non-stop direct</b> flight (2h 10m total flight time)</div>
           </div>
           <div class="ai-reason-item">
             <span class="check-icon">✓</span>
-            <div><b>Optimal morning</b> departure slot</div>
+            <div><b>Optimal morning</b> departure window (06:10 AM)</div>
           </div>
           <div class="ai-reason-item">
             <span class="check-icon">✓</span>
-            <div><b>94% on-time</b> historical DGCA performance</div>
+            <div><b>95% on-time</b> historical DGCA operational reliability</div>
           </div>
         </div>
 
@@ -258,21 +433,263 @@
             <button type="button" class="ai-compare-chip" onclick="filterByAiCategory('fastest', this)">⚡ Fastest Non-Stop</button>
             <button type="button" class="ai-compare-chip" onclick="filterByAiCategory('family', this)">👨‍👩‍👧 Best for Families</button>
           </div>
-          <button type="button" class="btn green" onclick="selectFlight('IndiGo', '6E-2341', 5240, 'BLR', 'Bengaluru')" style="display:inline-flex; align-items:center; gap:8px; font-weight:800; padding:10px 22px; font-size:13.5px;">
+          <button type="button" class="btn green" onclick="selectFlight('IndiGo', '6E-204', 3980, 'DEL', 'BOM')" style="display:inline-flex; align-items:center; gap:8px; font-weight:800; padding:10px 22px; font-size:13.5px;">
             <span>Choose AI Pick</span> <span>➔</span>
           </button>
         </div>
       </div>
 
-      <!-- Instant Multi-Airline Comparison Matrix (Triggered automatically upon Place Selection) -->
+      <!-- =========================================================
+           PRICE INTELLIGENCE & FARE TRAJECTORY FORECAST
+           ========================================================= -->
+      <div class="home-price-intel-section" id="homePriceIntelSection" style="margin:30px 0;">
+        <div class="section-head" style="margin-bottom:14px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge green" style="font-size:10.5px;">PRICE INTELLIGENCE</span>
+              <span class="metric-sub" id="homePriceSectorBadge">DEL ➔ BOM Sector</span>
+            </div>
+            <h2 style="margin:4px 0 2px; font-size:20px;">Real-Time Price Intelligence &amp; Trend Forecast</h2>
+            <p class="metric-sub" style="margin:0;">14-day price movements, buy/wait signals, and alternative date savings generated by AirfareX intelligence.</p>
+          </div>
+          <button class="btn sm light" onclick="showTab('prediction', document.querySelector('.main-nav a[data-tab=\'prediction\']'))">Open Full Predictor ➔</button>
+        </div>
+
+        <div class="home-price-intel-grid" id="homePriceIntelGrid">
+          <!-- Card 1: Buy vs Wait Signal -->
+          <div class="home-price-intel-card" id="homePriceSignalCard">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="badge green" id="homePriceSignalBadge">● BUY NOW RECOMMENDED</span>
+              <span style="font-size:11.5px; color:var(--text-muted); font-weight:700;" id="homePriceConfBadge">89% Confidence</span>
+            </div>
+            <div style="margin:10px 0;">
+              <div style="font-size:12px; color:var(--text-muted);">Current Base Fare</div>
+              <div style="font-size:26px; font-weight:800; color:var(--text-main); font-family:'JetBrains Mono',monospace;" id="homePriceCurrentFare">₹3,980</div>
+              <div style="font-size:12px; color:var(--brand-mint); font-weight:700; margin-top:2px;" id="homePriceDeltaText">Potential Savings: ₹1,250 vs next week</div>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); line-height:1.4; margin:0;" id="homePriceSignalDesc">Seat inventory is depleting rapidly on this sector. Historical DGCA elasticity indicates fares will surge over the next 4–6 days.</p>
+          </div>
+
+          <!-- Card 2: Date Flexibility & Alternatives -->
+          <div class="home-price-intel-card" id="homePriceSavingsCard">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="badge blue">📅 DATE FLEXIBILITY</span>
+              <span style="font-size:11.5px; color:var(--brand-blue); font-weight:700;">Save up to 18%</span>
+            </div>
+            <div style="margin:10px 0;">
+              <div style="font-size:14px; font-weight:700; color:var(--text-main); margin-bottom:4px;">Optimal Booking Window</div>
+              <p style="font-size:12px; color:var(--text-muted); line-height:1.4; margin:0 0 10px;" id="homePriceOptimalWindow">Book 7–14 days before departure for lowest non-peak fares.</p>
+              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; font-size:11.5px; color:var(--text-secondary);">
+                💡 <b>Tip:</b> Mid-week departures (Tue/Wed) average ₹650 cheaper than weekend slots.
+              </div>
+            </div>
+            <a href="javascript:void(0)" onclick="showTab('monthly-fares', document.querySelector('.main-nav a[data-tab=\'monthly-fares\']'))" style="font-size:12px; font-weight:700; color:var(--brand-blue); text-decoration:none;">View 30-Day Lowest Fare Calendar ➔</a>
+          </div>
+
+          <!-- Card 3: Market Volatility & Drivers -->
+          <div class="home-price-intel-card" id="homePriceDriversCard">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="badge purple">⚡ MARKET DRIVERS</span>
+              <span style="font-size:11.5px; color:var(--text-muted);">DGCA Elasticity</span>
+            </div>
+            <div style="margin:10px 0; display:flex; flex-direction:column; gap:6px;" id="homePriceDriversList">
+              <div style="font-size:12px; color:var(--text-secondary); display:flex; align-items:flex-start; gap:6px;">
+                <span style="color:var(--brand-blue);">•</span> High business passenger demand on morning peak slots
+              </div>
+              <div style="font-size:12px; color:var(--text-secondary); display:flex; align-items:flex-start; gap:6px;">
+                <span style="color:var(--brand-blue);">•</span> 6 daily non-stop flights maintaining competitive base fares
+              </div>
+              <div style="font-size:12px; color:var(--text-secondary); display:flex; align-items:flex-start; gap:6px;">
+                <span style="color:var(--brand-blue);">•</span> Moderate fuel surcharge stability across domestic carriers
+              </div>
+            </div>
+            <button class="btn sm light" style="width:100%; margin-top:auto;" onclick="quickAlert('DEL ➔ BOM', 3980)">🔔 Set Price Drop Alert</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================================================
+           AI TRAVEL COPILOT SHOWCASE
+           ========================================================= -->
+      <div class="home-copilot-section" id="homeAiCopilot">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <span class="badge blue" style="font-size:10.5px;">CONVERSATIONAL AI</span>
+            <h2 style="font-size:20px; font-weight:800; margin:4px 0 2px; color:var(--text-main);">Meet your AI Travel Copilot</h2>
+            <p class="metric-sub" style="margin:0;">Ask natural-language questions about fares, luggage allowances, connections, and booking strategy.</p>
+          </div>
+          <button class="btn green sm" onclick="toggleAiAssistant(true)" style="display:inline-flex; align-items:center; gap:6px; font-weight:800;">
+            <span>🤖 Open AI Copilot Chat</span> <span>➔</span>
+          </button>
+        </div>
+
+        <div class="home-copilot-chips">
+          <button type="button" class="home-copilot-chip" onclick="sendPromptToAi('Which flight should I choose?')">💬 Which flight should I choose?</button>
+          <button type="button" class="home-copilot-chip" onclick="sendPromptToAi('Why is this flight better?')">💬 Why is this flight better?</button>
+          <button type="button" class="home-copilot-chip" onclick="sendPromptToAi('Is this price good?')">💬 Is this price good?</button>
+          <button type="button" class="home-copilot-chip" onclick="sendPromptToAi('Show me the cheapest option')">💬 Show me the cheapest option</button>
+          <button type="button" class="home-copilot-chip" onclick="sendPromptToAi('Find a faster option')">💬 Find a faster option</button>
+          <button type="button" class="home-copilot-chip" onclick="sendPromptToAi('Compare these flights')">💬 Compare these flights</button>
+        </div>
+      </div>
+
+      <!-- =========================================================
+           HOW AIRFAREX WORKS (5-STEP PIPELINE DIAGRAM)
+           ========================================================= -->
+      <div class="how-it-works-box" id="howAirfarexWorks" style="margin:30px 0;">
+        <div class="section-head" style="margin-bottom:0;">
+          <div>
+            <span class="badge blue" style="font-size:10.5px;">How AirfareX Works</span>
+            <h2 style="margin:4px 0 2px; font-size:18px;">Aviation Intelligence &amp; Decision Pipeline</h2>
+            <p class="metric-sub" style="margin:0;">From multi-provider flight ingestion to explainable AI recommendations and secure checkout.</p>
+          </div>
+        </div>
+        <div class="pipeline-grid">
+          <div class="pipeline-step-card">
+            <div class="pipeline-step-num">Step 1</div>
+            <div class="pipeline-step-icon">📡</div>
+            <div class="pipeline-step-title">Flight Ingestion</div>
+            <div class="pipeline-step-desc">Aggregates domestic carrier inventory, schedules, and multi-segment routes.</div>
+          </div>
+          <div class="pipeline-step-card">
+            <div class="pipeline-step-num">Step 2</div>
+            <div class="pipeline-step-icon">📊</div>
+            <div class="pipeline-step-title">Price Intelligence</div>
+            <div class="pipeline-step-desc">Computes 14-day forecasts, route alternatives, and date savings.</div>
+          </div>
+          <div class="pipeline-step-card">
+            <div class="pipeline-step-num">Step 3</div>
+            <div class="pipeline-step-icon">🤖</div>
+            <div class="pipeline-step-title">AI Recommendation</div>
+            <div class="pipeline-step-desc">5-factor objective scoring (0–100) &amp; badges (Cheapest, Fastest, Best Value).</div>
+          </div>
+          <div class="pipeline-step-card">
+            <div class="pipeline-step-num">Step 4</div>
+            <div class="pipeline-step-icon">🔒</div>
+            <div class="pipeline-step-title">Secure Booking</div>
+            <div class="pipeline-step-desc">Server-authoritative price breakdown and anti-tamper payment orders.</div>
+          </div>
+          <div class="pipeline-step-card">
+            <div class="pipeline-step-num">Step 5</div>
+            <div class="pipeline-step-icon">🧳</div>
+            <div class="pipeline-step-title">Trip Management</div>
+            <div class="pipeline-step-desc">Isolated user itineraries, DGCA refund rules, and price drop alerts.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =========================================================
+           EXPLORE AIRFAREX FEATURES (11-CARD RICH GRID)
+           ========================================================= -->
+      <div class="home-features-section" id="homeFeaturesSection">
+        <div class="section-head">
+          <div>
+            <span class="badge cyan" style="font-size:10.5px;">COMPLETE PRODUCT SUITE</span>
+            <h2 style="margin:4px 0 2px; font-size:22px; font-weight:800;">Explore AirfareX Features</h2>
+            <p class="metric-sub" style="margin:0;">Every tool and intelligence module available in the AirfareX platform.</p>
+          </div>
+        </div>
+
+        <div class="home-features-grid" id="homeFeatureCardsGrid">
+          <!-- 1. Flight Explorer -->
+          <div class="home-feature-card" onclick="showTab('explorer', document.querySelector('.main-nav a[data-tab=\'explorer\']'))">
+            <div class="card-icon">🔍</div>
+            <h3>Flight Explorer</h3>
+            <p>Live schedule search with stops, baggage, airline, and time-of-day filters.</p>
+            <div class="card-cta">Search Flights ➔</div>
+          </div>
+
+          <!-- 2. Compare Airlines -->
+          <div class="home-feature-card" onclick="showTab('comparison', document.querySelector('.main-nav a[data-tab=\'comparison\']'))">
+            <div class="card-icon">⚖️</div>
+            <h3>Compare Airlines</h3>
+            <p>Side-by-side seat pitch, baggage allowances, meal options, and on-time ratings.</p>
+            <div class="card-cta">Open Matrix ➔</div>
+          </div>
+
+          <!-- 3. Monthly Low Fares -->
+          <div class="home-feature-card" onclick="showTab('monthly-fares', document.querySelector('.main-nav a[data-tab=\'monthly-fares\']'))">
+            <div class="card-icon">📅</div>
+            <h3>Monthly Low Fares</h3>
+            <p>30-day interactive fare calendar with price heatmaps and cheapest departure dates.</p>
+            <div class="card-cta">View Calendar ➔</div>
+          </div>
+
+          <!-- 4. Offers & Discounts -->
+          <div class="home-feature-card" onclick="showTab('offers', document.querySelector('.main-nav a[data-tab=\'offers\']'))">
+            <div class="card-icon">🏷️</div>
+            <h3>Offers &amp; Discounts</h3>
+            <p>Verified bank promo codes, festival specials, and student/defence concessions.</p>
+            <div class="card-cta">Claim Deals ➔</div>
+          </div>
+
+          <!-- 5. Price Predictor -->
+          <div class="home-feature-card" onclick="showTab('prediction', document.querySelector('.main-nav a[data-tab=\'prediction\']'))">
+            <div class="card-icon">🔮</div>
+            <h3>Price Predictor</h3>
+            <p>14-day AI price trajectory forecasts and buy/wait recommendations with 92% accuracy.</p>
+            <div class="card-cta">Forecast Fares ➔</div>
+          </div>
+
+          <!-- 6. Refund Tracker -->
+          <div class="home-feature-card" onclick="showTab('refunds', document.querySelector('.main-nav a[data-tab=\'refunds\']'))">
+            <div class="card-icon">💳</div>
+            <h3>Refund Tracker</h3>
+            <p>Track airline cancellation refunds and claim statutory compensation under DGCA rules.</p>
+            <div class="card-cta">Track PNR ➔</div>
+          </div>
+
+          <!-- 7. Route Intelligence -->
+          <div class="home-feature-card" onclick="showAdminSubtab('routes')">
+            <div class="card-icon">🗺️</div>
+            <h3>Route Intelligence</h3>
+            <p>Sector traffic volumes, carrier market shares, and passenger demand elasticity.</p>
+            <div class="card-cta">Explore Routes ➔</div>
+          </div>
+
+          <!-- 8. Tourist Packages -->
+          <div class="home-feature-card" onclick="showTab('tourist-plans', document.querySelector('.main-nav a[data-tab=\'tourist-plans\']'))">
+            <div class="card-icon">🌴</div>
+            <h3>Tourist Packages</h3>
+            <p>Curated holiday packages across India with bundled flights, hotels, and sightseeing.</p>
+            <div class="card-cta">View Packages ➔</div>
+          </div>
+
+          <!-- 9. Saved & Alerts -->
+          <div class="home-feature-card" onclick="showTab('saved', document.querySelector('.main-nav a[data-tab=\'saved\']'))">
+            <div class="card-icon">🔔</div>
+            <h3>Saved &amp; Alerts</h3>
+            <p>Set automated price drop alerts and track your favorite domestic routes.</p>
+            <div class="card-cta">Manage Alerts ➔</div>
+          </div>
+
+          <!-- 10. My Trips -->
+          <div class="home-feature-card" onclick="showTab('trips', document.querySelector('.main-nav a[data-tab=\'trips\']'))">
+            <div class="card-icon">🧳</div>
+            <h3>My Trips</h3>
+            <p>Access your booked itineraries, passenger tickets, and booking receipts securely.</p>
+            <div class="card-cta">View Bookings ➔</div>
+          </div>
+
+          <!-- 11. AI Travel Copilot -->
+          <div class="home-feature-card" onclick="toggleAiAssistant(true)">
+            <div class="card-icon">🤖</div>
+            <h3>AI Travel Copilot</h3>
+            <p>Conversational assistant for flight trade-offs, luggage rules, and itinerary advice.</p>
+            <div class="card-cta">Chat with Copilot ➔</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instant Multi-Airline Comparison Matrix -->
       <div id="homeComparisonCard" class="instant-comparison-card">
         <div class="instant-comp-header">
           <div>
             <div style="display:flex; align-items:center; gap:10px;">
-              <span class="instant-route-badge" id="instantCompRouteBadge">✈ HYD ➔ DEL · Instant Comparison</span>
+              <span class="instant-route-badge" id="instantCompRouteBadge">✈ DEL ➔ BOM · Instant Comparison</span>
               <span class="live-badge">REAL-TIME AIRLINE BENCHMARKS</span>
             </div>
-            <h2 style="margin:6px 0 2px; font-size:20px;">Side-by-Side Airline Price & Perks Comparison</h2>
+            <h2 style="margin:6px 0 2px; font-size:20px;">Side-by-Side Airline Price &amp; Perks Comparison</h2>
             <p class="metric-sub" style="margin:0;">Instant cross-carrier comparison across IndiGo, Air India, Akasa Air, SpiceJet, and AI Express for the selected places.</p>
           </div>
           <div style="display:flex; gap:10px;">
@@ -312,10 +729,23 @@
             <h2 data-i18n="dest_title">Top Indian Metro Sectors</h2>
             <p class="metric-sub" data-i18n="dest_subtitle">Explore representative domestic routes with live benchmark fares, instant comparison, and tourist packages.</p>
           </div>
-          <button class="btn light sm" onclick="showTab('routes', document.querySelector('.main-nav a[data-tab=\'routes\']'))" data-i18n="dest_explore_btn">Explore Network →</button>
+          <button class="btn light sm" onclick="showAdminSubtab('routes')" data-i18n="dest_explore_btn">Explore Network →</button>
         </div>
 
         <div class="destination-grid">
+          <div class="dest-card" onclick="selectDestinationSector('DEL', 'BOM', 'Mumbai (BOM)');">
+            <img src="/assets/images/destination_mumbai.jpg" alt="Mumbai Bandra-Worli Sea Link aerial view" class="dest-img">
+            <div class="dest-gradient"></div>
+            <div class="dest-content">
+              <span class="dest-city-code"><span data-i18n="dest_sector">Sector</span> BOM</span>
+              <div class="dest-city-name" data-i18n="city_bom">Mumbai</div>
+              <div class="dest-fare-row">
+                <span class="dest-fare"><span data-i18n="dest_from">From</span> ₹3,980</span>
+                <span class="dest-trend good">▼ -4.2%</span>
+              </div>
+            </div>
+          </div>
+
           <div class="dest-card" onclick="selectDestinationSector('HYD', 'DEL', 'Delhi (DEL)');">
             <img src="/assets/images/destination_delhi.jpg" alt="Delhi India Gate dusk view" class="dest-img">
             <div class="dest-gradient"></div>
@@ -325,19 +755,6 @@
               <div class="dest-fare-row">
                 <span class="dest-fare"><span data-i18n="dest_from">From</span> ₹4,620</span>
                 <span class="dest-trend risk">▲ +14.2%</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="dest-card" onclick="selectDestinationSector('DEL', 'BOM', 'Mumbai (BOM)');">
-            <img src="/assets/images/destination_mumbai.jpg" alt="Mumbai Bandra-Worli Sea Link aerial view" class="dest-img">
-            <div class="dest-gradient"></div>
-            <div class="dest-content">
-              <span class="dest-city-code"><span data-i18n="dest_sector">Sector</span> BOM</span>
-              <div class="dest-city-name" data-i18n="city_bom">Mumbai</div>
-              <div class="dest-fare-row">
-                <span class="dest-fare"><span data-i18n="dest_from">From</span> ₹4,390</span>
-                <span class="dest-trend risk">▲ +9.8%</span>
               </div>
             </div>
           </div>
@@ -374,31 +791,31 @@
         </div>
       </div>
 
-      <!-- Customer Travel Highlights & Value Guarantees (Issue #5) -->
-      <div class="grid-4 customer-kpi-grid">
+      <!-- Trust & Data Source Explanation Section -->
+      <div class="grid-4 customer-kpi-grid" style="margin-top:24px;">
         <div class="card travel-stat-card">
-          <div class="travel-stat-icon">✈️</div>
-          <div class="metric-title">1M+ Fares Analyzed</div>
-          <div class="metric">Live Benchmarks</div>
-          <div class="metric-sub good">Comparing 6 domestic carriers in real-time</div>
+          <div class="travel-stat-icon">📡</div>
+          <div class="metric-title">Data Transparency</div>
+          <div class="metric">DEVELOPMENT Mode</div>
+          <div class="metric-sub good">Using verified MockDevelopmentProvider schedules (Amadeus GDS supported)</div>
         </div>
         <div class="card travel-stat-card">
-          <div class="travel-stat-icon">🏷️</div>
-          <div class="metric-title">Guaranteed Savings</div>
-          <div class="metric">Save up to ₹2,500</div>
-          <div class="metric-sub good">Verified promo coupons & holiday bundling</div>
+          <div class="travel-stat-icon">🔒</div>
+          <div class="metric-title">Payment Security</div>
+          <div class="metric">Sandbox Gateway</div>
+          <div class="metric-sub good">Server-authoritative HMAC signature verification &amp; anti-tampering</div>
         </div>
         <div class="card travel-stat-card">
-          <div class="travel-stat-icon">⚡</div>
-          <div class="metric-title">Zero Fee on UPI</div>
-          <div class="metric">Save ₹350</div>
-          <div class="metric-sub good">Zero payment gateway surcharge on any UPI app</div>
-        </div>
-        <div class="card travel-stat-card">
-          <div class="travel-stat-icon">🛡️</div>
+          <div class="travel-stat-icon">🏛️</div>
           <div class="metric-title">DGCA Passenger Rights</div>
-          <div class="metric">100% Protected</div>
-          <div class="metric-sub good">Full statutory refunds & delay compensation</div>
+          <div class="metric">Standard Rules</div>
+          <div class="metric-sub good">Statutory cancellation &amp; refund policies with automated claims</div>
+        </div>
+        <div class="card travel-stat-card">
+          <div class="travel-stat-icon">🤖</div>
+          <div class="metric-title">Explainable AI</div>
+          <div class="metric">0–100 Scoring</div>
+          <div class="metric-sub good">Multi-factor price, speed, reliability, and value decomposition</div>
         </div>
       </div>
     </section>
@@ -448,6 +865,7 @@
         <div style="text-align:right; min-width:220px;">
           <div class="metric-sub" data-i18n="pred_observed_fare">Current Observed Fare</div>
           <div class="metric" id="predCurrentFare" style="margin:4px 0;">₹5,240</div>
+          <div class="metric-sub" id="predExpectedRange" style="font-size:11.5px; margin-bottom:8px; color:var(--text-muted);">Expected range: ₹4,800 – ₹6,100</div>
           <button class="btn sm" onclick="triggerSearch()" data-i18n="pred_book_price_btn">Book at this Price</button>
         </div>
       </div>
@@ -589,23 +1007,26 @@
           <h1 data-i18n="exp_title">Flight Explorer</h1>
           <p class="metric-sub" data-i18n="exp_subtitle">Consumer-style flight comparison with statistical fare scoring and emissions metrics.</p>
         </div>
-        <div class="result-toolbar" style="display:flex; gap:8px;">
-          <button id="sortBtn_score" class="btn sm dark" onclick="setSort('score')" data-i18n="sort_score">Best Score</button>
-          <button id="sortBtn_price" class="btn sm gray" onclick="setSort('price')" data-i18n="sort_price">Cheapest</button>
-          <button id="sortBtn_duration" class="btn sm gray" onclick="setSort('duration')" data-i18n="sort_duration">Fastest</button>
-          <button id="sortBtn_emissions" class="btn sm gray" onclick="setSort('emissions')" data-i18n="sort_emissions">Eco Friendly</button>
+        <div class="result-toolbar" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <span style="font-size:12px; font-weight:700; color:var(--text-muted); margin-right:4px;">SORT BY:</span>
+          <button id="sortBtn_score" class="btn sm dark" onclick="setSort('score')" title="Recommended / Highest Score">⭐ Recommended</button>
+          <button id="sortBtn_price_asc" class="btn sm gray" onclick="setSort('price_asc')" title="Lowest Price First">💸 Lowest Price</button>
+          <button id="sortBtn_highest_score" class="btn sm gray" onclick="setSort('highest_score')" title="Highest Rating First">🏆 Highest Score</button>
+          <button id="sortBtn_duration_asc" class="btn sm gray" onclick="setSort('duration_asc')" title="Shortest Travel Duration">⚡ Fastest</button>
+          <button id="sortBtn_dep_asc" class="btn sm gray" onclick="setSort('dep_asc')" title="Earliest Departure First">🌅 Earliest Dep.</button>
+          <button id="sortBtn_reliability" class="btn sm gray" onclick="setSort('reliability')" title="Highest On-Time Punctuality">🛡️ Most Reliable</button>
         </div>
       </div>
 
       <div class="filter-card">
-        <div class="filters-grid">
+        <div class="filters-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
           <div class="field">
             <label data-i18n="filter_from">FROM AIRPORT</label>
-            <input id="fFrom" value="HYD" onchange="loadFlights(); updateExplorerComparison();" placeholder="City/Code">
+            <input id="fFrom" value="HYD" oninput="loadFlights(); updateExplorerComparison();" onchange="loadFlights(); updateExplorerComparison();" placeholder="City/Code (e.g. HYD, DEL)">
           </div>
           <div class="field">
             <label data-i18n="filter_to">TO AIRPORT</label>
-            <input id="fTo" value="DEL" onchange="loadFlights(); updateExplorerComparison();" placeholder="City/Code">
+            <input id="fTo" value="DEL" oninput="loadFlights(); updateExplorerComparison();" onchange="loadFlights(); updateExplorerComparison();" placeholder="City/Code (e.g. DEL, BOM)">
           </div>
           <div class="field">
             <label data-i18n="filter_stops">STOPS</label>
@@ -630,31 +1051,77 @@
             <label data-i18n="filter_max_price">MAX PRICE</label>
             <select id="fPrice" onchange="loadFlights()">
               <option data-i18n="opt_any">Any</option>
+              <option>₹4,000</option>
               <option>₹5,000</option>
-              <option>₹6,500</option>
+              <option>₹6,000</option>
               <option>₹8,000</option>
               <option>₹10,000</option>
             </select>
           </div>
+          <div class="field">
+            <label>DEPARTURE TIME</label>
+            <select id="fTime" onchange="loadFlights()">
+              <option value="Any time">Any time</option>
+              <option value="Morning">Morning (06:00 – 12:00)</option>
+              <option value="Afternoon">Afternoon (12:00 – 18:00)</option>
+              <option value="Evening">Evening (18:00 – 24:00)</option>
+              <option value="Night">Night (00:00 – 06:00)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>MINIMUM SCORE</label>
+            <select id="fMinScore" onchange="loadFlights()">
+              <option value="0">Any Score</option>
+              <option value="90">90+ (Excellent)</option>
+              <option value="80">80+ (Very Good)</option>
+              <option value="70">70+ (Good)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>CABIN CLASS</label>
+            <select id="fCabin" onchange="loadFlights()">
+              <option value="Any">Any Cabin</option>
+              <option value="Economy">Economy</option>
+              <option value="Premium Economy">Premium Economy</option>
+              <option value="Business">Business Class</option>
+            </select>
+          </div>
         </div>
 
-        <div class="filter-toggle-row">
+        <div class="filter-toggle-row" style="display:flex; align-items:center; flex-wrap:wrap; gap:12px;">
           <label class="switch-control">
             <input type="checkbox" id="directToggle" onchange="loadFlights()"><span data-i18n="toggle_direct"> Direct flights only</span>
           </label>
           <label class="switch-control">
             <input type="checkbox" id="bagsToggle" onchange="loadFlights()"><span data-i18n="toggle_bag"> Include 15kg checked bag</span>
           </label>
-          <button class="btn sm light" style="margin-left:auto;" onclick="loadFlights()" data-i18n="btn_apply_filters">Apply Filters</button>
+          <div style="margin-left:auto; display:flex; gap:8px;">
+            <button class="btn sm light" onclick="resetFlightFilters()" title="Clear all filters">🔄 Reset Filters</button>
+            <button class="btn sm primary" onclick="loadFlights()" data-i18n="btn_apply_filters">Apply Filters</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Natural Language AI Search in Explorer -->
+      <div class="nl-ai-search-box" style="margin-top:0;">
+        <div class="nl-ai-search-inner">
+          <span class="nl-ai-icon">🤖</span>
+          <input type="text" id="expNlSearchInput" placeholder="Natural language search: 'Fastest morning flight to Delhi under 6000 with IndiGo'" onkeydown="if(event.key==='Enter') executeNlSearch('expNlSearchInput')">
+          <button type="button" class="btn green sm nl-ai-btn" onclick="executeNlSearch('expNlSearchInput')">
+            <span>AI Search</span> <span>⚡</span>
+          </button>
+          <button type="button" class="btn sm light" onclick="openModal('userPreferencesModal')" title="Personalize AI scoring weights">
+            <span>⚙️ AI Preferences</span>
+          </button>
         </div>
       </div>
 
       <!-- Instant Airline Comparison Ribbon for Selected Route in Explorer -->
-      <div id="explorerComparisonCard" class="instant-comparison-card" style="margin-bottom:20px; padding:16px 20px;">
+      <div id="explorerComparisonCard" class="instant-comparison-card" style="margin-bottom:14px; padding:14px 18px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <div>
             <span style="font-size:12px; font-weight:800; color:var(--brand-cyan);" id="expCompSectorLabel">HYD ➔ DEL Multi-Airline Benchmark</span>
-            <div style="font-size:13px; color:var(--text-muted); margin-top:2px;">Compare airline prices side-by-side or book bundled tourist packages.</div>
+            <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Compare airline prices side-by-side or book bundled tourist packages.</div>
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn sm" onclick="showTab('comparison', document.querySelector('.main-nav a[data-tab=\'comparison\']'))">Full Comparison Table ➔</button>
@@ -662,6 +1129,9 @@
           </div>
         </div>
       </div>
+
+      <!-- Phase 7: AI Smart Recommendation Summary Grid (Cheapest / Fastest / Best Value / AirfareX Pick) -->
+      <div id="aiRecSummaryGrid" class="ai-rec-summary-grid hidden"></div>
 
       <div id="flightResults"></div>
     </section>
@@ -844,6 +1314,34 @@
             <div class="metric-sub" data-i18n="dq_outliers_sub">IQR anomaly detection</div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         SECTION: MY TRIPS & BOOKINGS
+         ========================================================= -->
+    <section id="trips" class="hidden">
+      <div class="section-head">
+        <div>
+          <h1>🧳 My Bookings & Itineraries</h1>
+          <p class="metric-sub">View and manage your confirmed domestic flight tickets and holiday packages.</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn sm" onclick="showTab('explorer')">🔍 Search Flights</button>
+        </div>
+      </div>
+
+      <!-- Filter Tabs: All, Upcoming, Completed, Cancelled -->
+      <div style="display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:12px; overflow-x:auto;">
+        <button class="tab-btn active" id="tripFilterAll" onclick="filterTrips('All', this)" style="padding:6px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--brand-navy, #0f2447); color:#fff; cursor:pointer; font-weight:700; font-size:13px;">All Bookings</button>
+        <button class="tab-btn" id="tripFilterUpcoming" onclick="filterTrips('Upcoming', this)" style="padding:6px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-main); cursor:pointer; font-weight:700; font-size:13px;">Upcoming</button>
+        <button class="tab-btn" id="tripFilterCompleted" onclick="filterTrips('Completed', this)" style="padding:6px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-main); cursor:pointer; font-weight:700; font-size:13px;">Completed</button>
+        <button class="tab-btn" id="tripFilterCancelled" onclick="filterTrips('Cancelled', this)" style="padding:6px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-color); background:var(--bg-surface); color:var(--text-main); cursor:pointer; font-weight:700; font-size:13px;">Cancelled</button>
+      </div>
+
+      <!-- Bookings List Container -->
+      <div id="myTripsListContainer">
+        <!-- Dynamically rendered by app.js / auth.js -->
       </div>
     </section>
 
@@ -1543,7 +2041,7 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <button type="button" class="btn light sm" style="text-align:left; border-color:var(--brand-cyan); background:rgba(14,165,233,0.1);">
             <div style="font-weight:700; font-size:12px; color:var(--brand-cyan);">📱 UPI / Google Pay</div>
-            <div style="font-size:10px; color:var(--text-muted);">Auto-verified NPCI Switch</div>
+            <div style="font-size:10px; color:var(--text-muted);">Sandbox Gateway Flow</div>
           </button>
           <button type="button" class="btn light sm" style="text-align:left;">
             <div style="font-weight:700; font-size:12px;">💳 Test Rupay / Visa Card</div>
@@ -1677,11 +2175,501 @@
     </div>
   </div>
 
+  <!-- =========================================================
+       MODAL 9: SUPABASE AUTHENTICATION (SIGN IN / SIGN UP / FORGOT)
+       ========================================================= -->
+  <div class="modal-backdrop" id="authModal">
+    <div class="modal-window" style="max-width:440px; padding:28px;">
+      <button class="modal-close-btn" onclick="closeModal('authModal')">✕</button>
+
+      <!-- Auth Brand Header -->
+      <div style="text-align:center; margin-bottom:20px;">
+        <div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, var(--brand-navy, #0f2447), var(--brand-cyan, #0284c7)); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:10px;">✈</div>
+        <h2 style="margin:0 0 6px 0; font-size:20px; color:var(--text-main);" id="authModalHeading">Welcome to AirfareX</h2>
+        <p style="margin:0; font-size:13px; color:var(--text-muted);" id="authModalSubheading">Sign in to manage your bookings, alerts and saved routes.</p>
+      </div>
+
+      <!-- Auth Error / Success Alert Box -->
+      <div id="authAlertBox" style="display:none; padding:10px 14px; border-radius:var(--radius-md); font-size:13px; margin-bottom:16px;"></div>
+
+      <!-- Tab Switcher (Login / Signup) -->
+      <div id="authTabSwitcher" style="display:flex; background:var(--bg-muted); padding:3px; border-radius:var(--radius-md); margin-bottom:20px;">
+        <button type="button" class="auth-pill-btn active" id="authTabBtnLogin" onclick="switchAuthTab('login')" style="flex:1; padding:8px 0; border:none; background:var(--bg-surface); color:var(--text-main); font-weight:700; font-size:13px; border-radius:var(--radius-sm); cursor:pointer; transition:all 0.2s;">Sign In</button>
+        <button type="button" class="auth-pill-btn" id="authTabBtnSignup" onclick="switchAuthTab('signup')" style="flex:1; padding:8px 0; border:none; background:transparent; color:var(--text-muted); font-weight:700; font-size:13px; border-radius:var(--radius-sm); cursor:pointer; transition:all 0.2s;">Create Account</button>
+      </div>
+
+      <!-- 1. LOGIN FORM -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Email Address</label>
+          <input type="email" id="loginEmail" placeholder="e.g. rahul@example.com" required style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:14px;">
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--text-muted);">Password</label>
+            <a href="javascript:void(0)" onclick="switchAuthTab('forgot')" style="font-size:12px; color:var(--brand-cyan); text-decoration:none; font-weight:600;">Forgot?</a>
+          </div>
+          <input type="password" id="loginPassword" placeholder="Enter your password" required style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:14px;">
+        </div>
+        <button type="submit" class="btn primary" id="loginSubmitBtn" style="width:100%; padding:12px; font-size:14px; font-weight:700; margin-top:4px;">Sign In</button>
+      </form>
+
+      <!-- 2. SIGN UP FORM -->
+      <form id="signupForm" style="display:none;" onsubmit="handleSignupSubmit(event)">
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Full Name</label>
+          <input type="text" id="signupFullName" placeholder="e.g. Rahul Sharma" required style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:14px;">
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Email Address</label>
+          <input type="email" id="signupEmail" placeholder="e.g. rahul@example.com" required style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:14px;">
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Mobile Number (Optional)</label>
+          <input type="tel" id="signupPhone" placeholder="e.g. +91 98765 43210" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:14px;">
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Password (Min 6 characters)</label>
+          <input type="password" id="signupPassword" placeholder="Create a secure password" minlength="6" required style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:14px;">
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Confirm Password</label>
+          <input type="password" id="signupConfirmPassword" placeholder="Re-enter password" minlength="6" required style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:14px;">
+        </div>
+        <button type="submit" class="btn primary" id="signupSubmitBtn" style="width:100%; padding:12px; font-size:14px; font-weight:700; margin-top:4px;">Create Account</button>
+      </form>
+
+      <!-- 3. FORGOT PASSWORD FORM -->
+      <form id="forgotForm" style="display:none;" onsubmit="handleForgotSubmit(event)">
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
+          Enter the email associated with your account and we will send you a Supabase password recovery link.
+        </p>
+        <div class="field" style="margin-bottom:16px;">
+          <label style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Registered Email Address</label>
+          <input type="email" id="forgotEmail" placeholder="e.g. rahul@example.com" required style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:14px;">
+        </div>
+        <button type="submit" class="btn primary" id="forgotSubmitBtn" style="width:100%; padding:12px; font-size:14px; font-weight:700; margin-bottom:12px;">Send Reset Link</button>
+        <div style="text-align:center;">
+          <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="font-size:13px; color:var(--brand-cyan); font-weight:600; text-decoration:none;">← Back to Sign In</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       PHASE 7: COMPREHENSIVE FLIGHT DETAILS & SCORE BREAKDOWN MODAL
+       ========================================================= -->
+  <div class="modal-backdrop" id="flightDetailsModal">
+    <div class="modal-window" style="max-width:680px; padding:24px; max-height:90vh; overflow-y:auto;">
+      <button class="modal-close-btn" onclick="closeModal('flightDetailsModal')">✕</button>
+
+      <!-- Modal Header -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:14px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
+            <span class="smart-badge best-value" id="fDetBadge">BEST OVERALL</span>
+            <span class="score-badge-indicator excellent" id="fDetScoreBadge">⭐ 92/100 — Excellent</span>
+            <span style="font-size:12px; color:var(--text-muted);" id="fDetSector">HYD ➔ DEL</span>
+          </div>
+          <h2 style="margin:0; font-size:22px; color:var(--text-main);" id="fDetFlightTitle">IndiGo 6E 502</h2>
+          <div style="font-size:13px; color:var(--text-muted); margin-top:3px;" id="fDetAircraft">Airbus A321neo · Economy Standard</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Total Price</div>
+          <div style="font-size:24px; font-weight:800; color:var(--brand-mint);" id="fDetTotalFare">₹4,700</div>
+          <div style="font-size:11px; color:var(--text-muted);">All taxes included</div>
+        </div>
+      </div>
+
+      <!-- Schedule Strip -->
+      <div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:12px; align-items:center; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:18px;">
+        <div>
+          <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="fDetDepTime">07:15</div>
+          <div style="font-weight:700; font-size:13px; color:var(--brand-cyan);" id="fDetOriginCode">HYD</div>
+          <div style="font-size:12px; color:var(--text-muted);" id="fDetOriginCity">Hyderabad (RGIA)</div>
+          <div style="font-size:11px; color:var(--text-muted);" id="fDetTerminalDep">📍 Terminal T2 · Gate 12B</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:12px; font-weight:700; color:var(--brand-mint);" id="fDetDuration">2h 15m</div>
+          <div style="width:70px; height:2px; background:var(--brand-cyan); margin:6px auto;"></div>
+          <div style="font-size:11px; color:var(--text-muted);" id="fDetStops">Nonstop</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:20px; font-weight:800; color:var(--text-main);" id="fDetArrTime">09:30</div>
+          <div style="font-weight:700; font-size:13px; color:var(--brand-cyan);" id="fDetDestCode">DEL</div>
+          <div style="font-size:12px; color:var(--text-muted);" id="fDetDestCity">Delhi (IGI)</div>
+          <div style="font-size:11px; color:var(--text-muted);" id="fDetTerminalArr">📍 Terminal T2</div>
+        </div>
+      </div>
+
+      <!-- Comprehensive Score Breakdown Section -->
+      <div class="score-breakdown-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="margin:0; font-size:15px; font-weight:800; color:var(--text-main);">📊 Flight Score Breakdown (0–100)</h3>
+          <span style="font-size:12px; color:var(--text-muted);">Weighted Rating Formula</span>
+        </div>
+
+        <div class="score-bar-group">
+          <!-- Price Score -->
+          <div class="score-bar-row">
+            <div class="score-bar-meta">
+              <span>💸 Price Score (30% weight)</span>
+              <span id="fDetBarValPrice" style="color:#10b981;">92 / 100</span>
+            </div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill price" id="fDetBarPrice" style="width: 92%;"></div>
+            </div>
+          </div>
+
+          <!-- Reliability Score -->
+          <div class="score-bar-row">
+            <div class="score-bar-meta">
+              <span>🛡️ Reliability Score (25% weight)</span>
+              <span id="fDetBarValReliability" style="color:#3b82f6;">95 / 100</span>
+            </div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill reliability" id="fDetBarReliability" style="width: 95%;"></div>
+            </div>
+          </div>
+
+          <!-- Punctuality Score -->
+          <div class="score-bar-row">
+            <div class="score-bar-meta">
+              <span>⏱️ Punctuality & OTP (25% weight)</span>
+              <span id="fDetBarValPunctuality" style="color:#8b5cf6;">94 / 100</span>
+            </div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill punctuality" id="fDetBarPunctuality" style="width: 94%;"></div>
+            </div>
+          </div>
+
+          <!-- Comfort Score -->
+          <div class="score-bar-row">
+            <div class="score-bar-meta">
+              <span>💺 Comfort & Aircraft Fleet (20% weight)</span>
+              <span id="fDetBarValComfort" style="color:#f59e0b;">88 / 100</span>
+            </div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill comfort" id="fDetBarComfort" style="width: 88%;"></div>
+            </div>
+          </div>
+
+          <!-- Overall Score -->
+          <div class="score-bar-row" style="margin-top:6px; padding-top:10px; border-top:1px dashed var(--border-color);">
+            <div class="score-bar-meta" style="font-size:14px; font-weight:800;">
+              <span>🏆 Overall Composite Score</span>
+              <span id="fDetBarValOverall" style="color:var(--brand-cyan); font-size:16px;">92 / 100</span>
+            </div>
+            <div class="score-bar-track" style="height:10px;">
+              <div class="score-bar-fill overall" id="fDetBarOverall" style="width: 92%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plain English Reason -->
+        <div class="score-reason-box" id="fDetScoreReason">
+          Scored 92/100 based on competitive fare (92/100), 94% on-time rate (94/100), high fleet reliability (95/100), and 30" seat pitch comfort (88/100).
+        </div>
+      </div>
+
+      <!-- DGCA Fare Breakdown Grid -->
+      <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; margin-bottom:18px;">
+        <h4 style="margin:0 0 10px; font-size:13px; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px;">💰 DGCA Fee & Tax Breakdown</h4>
+        <div style="display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--text-muted);">Base Airfare</span>
+            <b id="fDetBaseFare">₹3,850</b>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--text-muted);">User Development Fee (UDF) & Security (ASF)</span>
+            <b id="fDetUdfFee">₹520</b>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--text-muted);">Aviation Fuel Surcharge (YQ) & Statutory Fees</span>
+            <b id="fDetFuelFee">₹210</b>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:var(--text-muted);">GST (5% Economy Domestic)</span>
+            <b id="fDetGstFee">₹120</b>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid var(--border-color); font-size:14px; font-weight:800; color:var(--brand-mint);">
+            <span>Total Payable Fare</span>
+            <span id="fDetFinalTotal">₹4,700</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Baggage, Policy & Aircraft Meta -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:20px; font-size:12px;">
+        <div style="padding:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-sm);">
+          <div style="font-weight:700; color:var(--text-main); margin-bottom:4px;">🧳 Baggage Allowance</div>
+          <div style="color:var(--text-muted);" id="fDetBaggage">7kg Cabin + 15kg Check-in included</div>
+        </div>
+        <div style="padding:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:var(--radius-sm);">
+          <div style="font-weight:700; color:var(--text-main); margin-bottom:4px;">🛡️ Cancellation & DGCA Policy</div>
+          <div style="color:var(--text-muted);" id="fDetPolicy">Free cancellation within 24h of booking</div>
+        </div>
+      </div>
+
+      <!-- Modal Actions -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <button class="btn light" onclick="closeModal('flightDetailsModal')">Close</button>
+        <button class="btn green" id="fDetBookBtn" style="padding:12px 24px; font-size:14px; font-weight:700;">
+          <span>✈️ Book This Flight (₹<span id="fDetBtnFare">4,700</span>)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL 10: WHY AIRFAREX RECOMMENDS THIS FLIGHT (PHASE 7)
+       ========================================================= -->
+  <div class="modal-backdrop" id="whyFlightModal">
+    <div class="modal-window" style="max-width:620px; padding:24px;">
+      <button class="modal-close-btn" onclick="closeModal('whyFlightModal')">✕</button>
+      
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <span class="smart-badge airfarex-pick" id="whyModalBadge">AIRFAREX PICK</span>
+            <span style="font-size:12px; color:var(--text-muted);" id="whyModalSector">DEL ➔ BOM</span>
+          </div>
+          <h2 style="margin:0; font-size:20px;" id="whyModalFlightTitle">IndiGo 6E-205 · New Delhi ➔ Mumbai</h2>
+          <span style="font-size:13px; color:var(--text-muted);" id="whyModalSchedule">07:15 – 09:25 · 2h 10m · Non-stop</span>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Authoritative Fare</div>
+          <div style="font-size:22px; font-weight:800; color:var(--brand-mint);" id="whyModalFare">₹4,240</div>
+        </div>
+      </div>
+
+      <!-- Score Overview & Comparison vs Cheapest Ribbon -->
+      <div style="display:grid; grid-template-columns: 140px 1fr; gap:16px; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:16px; align-items:center;">
+        <div style="text-align:center; border-right:1px solid rgba(255,255,255,0.08); padding-right:12px;">
+          <div style="font-size:36px; font-weight:900; color:var(--brand-cyan);" id="whyModalOverallScore">91</div>
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Overall Score / 100</div>
+        </div>
+        <div id="whyModalVsCheapestBox" style="font-size:12.5px; display:flex; flex-direction:column; gap:4px;">
+          <div><b>Compared with cheapest:</b> <span id="whyModalPriceDelta" style="color:#38bdf8;">+₹380</span></div>
+          <div><b>Time saved:</b> <span id="whyModalTimeSaved" style="color:var(--brand-mint);">2h 05m faster</span></div>
+          <div><b>Routing:</b> <span id="whyModalStopsBenefit">Non-stop direct flight</span></div>
+        </div>
+      </div>
+
+      <!-- Category Score Breakdown Bars -->
+      <div style="margin-bottom:16px;">
+        <h4 style="font-size:12px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; letter-spacing:0.5px;">Deterministic Score Breakdown</h4>
+        <div class="score-breakdown-box">
+          <div class="score-bar-row">
+            <span>Price Rating</span>
+            <div class="score-bar-track"><div class="score-bar-fill" id="scoreBarPrice" style="width:92%;"></div></div>
+            <span style="font-weight:700;" id="scoreValPrice">92</span>
+          </div>
+          <div class="score-bar-row">
+            <span>Duration Rating</span>
+            <div class="score-bar-track"><div class="score-bar-fill purple" id="scoreBarDur" style="width:88%;"></div></div>
+            <span style="font-weight:700;" id="scoreValDur">88</span>
+          </div>
+          <div class="score-bar-row">
+            <span>Stops & Routing</span>
+            <div class="score-bar-track"><div class="score-bar-fill green" id="scoreBarStops" style="width:100%;"></div></div>
+            <span style="font-weight:700;" id="scoreValStops">100</span>
+          </div>
+          <div class="score-bar-row">
+            <span>Convenience Slot</span>
+            <div class="score-bar-track"><div class="score-bar-fill amber" id="scoreBarConv" style="width:95%;"></div></div>
+            <span style="font-weight:700;" id="scoreValConv">95</span>
+          </div>
+          <div class="score-bar-row">
+            <span>Composite Value</span>
+            <div class="score-bar-track"><div class="score-bar-fill" id="scoreBarValue" style="width:90%;"></div></div>
+            <span style="font-weight:700;" id="scoreValValue">90</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Factual Reasons List -->
+      <div style="margin-bottom:16px;">
+        <h4 style="font-size:12px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; letter-spacing:0.5px;">Why AirfareX Recommends This</h4>
+        <div id="whyModalReasonsList" style="display:flex; flex-direction:column; gap:6px; font-size:13px;"></div>
+      </div>
+
+      <!-- Price Trend Forecast Box -->
+      <div id="whyModalTrendBox" style="background:rgba(14,165,233,0.08); border:1px solid rgba(14,165,233,0.25); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:14px; font-size:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <b style="color:var(--brand-cyan);" id="whyModalTrendTitle">🔮 Price Forecast: BUY NOW</b>
+          <span style="color:var(--text-muted);" id="whyModalTrendConfidence">89% Confidence</span>
+        </div>
+        <div style="color:var(--text-secondary);" id="whyModalTrendDesc">Observed seat inventory on this sector is depleting. Historical DGCA elasticity indicates fares will surge.</div>
+      </div>
+
+      <!-- Compliance & Baggage -->
+      <div style="font-size:11.5px; color:var(--text-muted); display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+        <span id="whyModalBaggage">🧳 7kg Cabin + 15kg Checked bag included</span>
+        <span>🛡️ DGCA CAR Sec 3 Statutory Protection</span>
+      </div>
+
+      <!-- Honest AI Attribution Banner -->
+      <div class="ai-attribution-banner">
+        <span>⚡ Powered by <b>AirfareX Aviation Intelligence</b></span>
+        <span>Deterministic Rule-Based Optimization</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL 11: AI FLIGHT SIDE-BY-SIDE COMPARISON (PHASE 7)
+       ========================================================= -->
+  <div class="modal-backdrop" id="flightComparisonModal">
+    <div class="modal-window" style="max-width:760px; padding:24px;">
+      <button class="modal-close-btn" onclick="closeModal('flightComparisonModal')">✕</button>
+
+      <div style="margin-bottom:18px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <span class="badge blue">AI FLIGHT COMPARISON</span>
+          <span style="font-size:12px; color:var(--text-muted);" id="compModalSectorTitle">DEL ➔ BOM</span>
+        </div>
+        <h2 style="margin:0; font-size:20px;">Side-by-Side Flight Comparison</h2>
+      </div>
+
+      <!-- 2-Column Comparison Grid -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:18px;">
+        <!-- Flight A Card -->
+        <div class="card" style="padding:16px; background:var(--bg-card); border-color:var(--border-color);" id="compCardA">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Flight Option 1</div>
+          <h3 style="margin:4px 0;" id="compFlightAName">IndiGo 6E-205</h3>
+          <div style="font-size:22px; font-weight:800; color:var(--brand-mint); margin:6px 0;" id="compFareA">₹4,240</div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; margin-top:10px;">
+            <div>⏱️ Duration: <b id="compDurA">2h 10m</b></div>
+            <div>🔄 Stops: <b id="compStopsA">Nonstop</b></div>
+            <div>🛫 Departure: <b id="compDepA">07:15</b></div>
+            <div>🛬 Arrival: <b id="compArrA">09:25</b></div>
+            <div>🏆 Overall Score: <b id="compScoreA" style="color:var(--brand-cyan);">91/100</b></div>
+          </div>
+          <button class="btn primary sm" style="width:100%; margin-top:14px;" id="compSelectBtnA">Select Flight A</button>
+        </div>
+
+        <!-- Flight B Card -->
+        <div class="card" style="padding:16px; background:var(--bg-card); border-color:var(--border-color);" id="compCardB">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Flight Option 2</div>
+          <h3 style="margin:4px 0;" id="compFlightBName">Air India AI-805</h3>
+          <div style="font-size:22px; font-weight:800; color:var(--brand-mint); margin:6px 0;" id="compFareB">₹4,890</div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:12.5px; margin-top:10px;">
+            <div>⏱️ Duration: <b id="compDurB">2h 15m</b></div>
+            <div>🔄 Stops: <b id="compStopsB">Nonstop</b></div>
+            <div>🛫 Departure: <b id="compDepB">10:00</b></div>
+            <div>🛬 Arrival: <b id="compArrB">12:15</b></div>
+            <div>🏆 Overall Score: <b id="compScoreB" style="color:var(--brand-cyan);">86/100</b></div>
+          </div>
+          <button class="btn primary sm" style="width:100%; margin-top:14px;" id="compSelectBtnB">Select Flight B</button>
+        </div>
+      </div>
+
+      <!-- AI Comparison Narrative Box -->
+      <div style="background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.25); border-radius:var(--radius-md); padding:14px; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+          <span style="font-size:16px;">💡</span>
+          <b style="color:#c4b5fd;">AirfareX Comparison Intelligence</b>
+        </div>
+        <p style="margin:0 0 8px; font-size:13px; line-height:1.5; color:var(--text-main);" id="compModalNarrative">
+          Flight A saves ₹650 and departs at a more convenient morning hour with a 91/100 composite score.
+        </p>
+        <div style="font-size:12px; font-weight:700; color:var(--brand-mint);" id="compModalVerdict">
+          Recommendation: Choose Flight A for superior value and budget efficiency.
+        </div>
+      </div>
+
+      <!-- Factual Key Differences -->
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:14px;">
+        <b style="color:var(--text-secondary); display:block; margin-bottom:4px;">Key Differential Factors:</b>
+        <ul id="compModalPointsList" style="margin:0; padding-left:18px; display:flex; flex-direction:column; gap:4px;"></ul>
+      </div>
+
+      <div class="ai-attribution-banner">
+        <span>⚡ Verified from Authoritative AirfareX Flight Schedules</span>
+        <span id="compModalProviderTag">Provider: RULE_BASED</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       MODAL 12: USER TRAVEL PREFERENCES (PERSONALIZATION)
+       ========================================================= -->
+  <div class="modal-backdrop" id="userPreferencesModal">
+    <div class="modal-window" style="max-width:480px; padding:24px;">
+      <button class="modal-close-btn" onclick="closeModal('userPreferencesModal')">✕</button>
+
+      <div style="margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <span class="badge purple">AI PERSONALIZATION</span>
+        </div>
+        <h2 style="margin:0; font-size:19px;">Traveler Scoring Preferences</h2>
+        <p class="metric-sub" style="margin:4px 0 0;">Customize how the AI scoring algorithm ranks and badges flights for you.</p>
+      </div>
+
+      <form id="userPreferencesForm" onsubmit="handleSavePreferences(event)">
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Primary Priority</label>
+          <select id="prefPriority" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
+            <option value="best_value">💎 Best Value (Balanced Price & Duration)</option>
+            <option value="lowest_price">💸 Lowest Price (Heavily weight fare)</option>
+            <option value="fastest">⚡ Fastest Travel Time (Minimize duration)</option>
+            <option value="nonstop">🛑 Non-Stop Only (Penalize connecting flights)</option>
+          </select>
+        </div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Preferred Departure Time</label>
+          <select id="prefTime" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
+            <option value="any">Any Time of Day</option>
+            <option value="morning">🌅 Morning Departure (05:00 – 12:00)</option>
+            <option value="afternoon">☀️ Afternoon (12:00 – 17:00)</option>
+            <option value="evening">🌙 Evening / Night (17:00 – 23:00)</option>
+          </select>
+        </div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <label style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; display:block;">Preferred Airline</label>
+          <select id="prefAirline" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-surface); color:var(--text-main); font-size:13px;">
+            <option value="">No Preference (All Airlines)</option>
+            <option value="IndiGo">IndiGo</option>
+            <option value="Air India">Air India</option>
+            <option value="Akasa Air">Akasa Air</option>
+            <option value="SpiceJet">SpiceJet</option>
+            <option value="Air India Express">Air India Express</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:18px;">
+          <label class="switch-control" style="font-size:13px;">
+            <input type="checkbox" id="prefFlexDates">
+            <span>Flexible with travel dates (Show low-fare adjacent days)</span>
+          </label>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn light" onclick="closeModal('userPreferencesModal')">Cancel</button>
+          <button type="submit" class="btn primary">Save Preferences</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Floating 2-Flight Comparison Bar Drawer -->
+  <div id="comparisonFloatingBar" class="comparison-floating-bar hidden">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:18px;">⚖️</span>
+      <span style="font-size:13px; font-weight:700;" id="compFloatingCount">2 flights selected</span>
+    </div>
+    <button class="btn green sm" onclick="launchSelectedFlightComparison()">Compare Now ➔</button>
+    <button class="btn light sm" onclick="clearFlightComparisonSelection()">Clear</button>
+  </div>
+
   <!-- Floating Launcher FAB -->
-  <button class="ai-fab-btn" id="aiFabBtn" onclick="toggleAiAssistant()" title="Open AirfareX AI Copilot">
+  <button class="ai-fab-btn copilot-fab-btn" id="copilotFabBtn" onclick="toggleAiAssistant()" title="Open AirfareX AI Copilot" aria-label="Open AirfareX AI Copilot">
     <span class="ai-fab-icon">🤖</span>
     <span data-i18n="ai_btn_label">AI Copilot</span>
-    <span class="ai-fab-pulse"></span>
+    <span class="ai-fab-pulse copilot-fab-pulse"></span>
   </button>
 
   <!-- Glassmorphic AI Chat Drawer -->
@@ -1703,23 +2691,23 @@
     <!-- Chat Message History -->
     <div class="ai-chat-body" id="aiChatBody">
       <div class="ai-msg assistant" id="aiWelcomeBubble">
-        <div data-i18n="ai_welcome_msg">Namaste! I am your <strong>Agentic AI Copilot</strong>. I autonomously plan trips, compare airline fares & perks, inspect monthly low-fare calendars, apply discount coupons, and enforce DGCA passenger rights. How can I assist you today?</div>
+        <div data-i18n="ai_welcome_msg">Namaste! I am your <strong>AirfareX AI Copilot</strong>. I analyze flight schedules, price trends, multi-factor value scores, baggage policies, and DGCA passenger guidelines to help you make smarter booking decisions. How can I help with your journey today?</div>
       </div>
     </div>
 
     <!-- Quick Prompt Suggestions Chips -->
     <div class="ai-chips-wrapper" id="aiQuickChips">
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🌴 Plan 4-day Goa vacation under ₹12k</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">⚖️ Compare IndiGo vs Air India to Mumbai</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">📅 Cheapest month to fly Bangalore to Delhi</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🏷️ Active student & bank discount coupons</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">📜 Baggage allowance & DGCA refund rules</button>
-      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">💳 Track refund PNR AIRX789</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">✨ Which flight should I choose?</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">⚖️ Why is this flight better?</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">📈 Is this price good?</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">💰 Show me the cheapest option</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">⚡ Find a faster option</button>
+      <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🔍 Compare these flights</button>
     </div>
 
     <!-- Chat Input Area -->
     <div class="ai-chat-input-row">
-      <input type="text" id="aiInputField" class="ai-input-field" placeholder="Ask about flights, price forecast, PNR refund..." data-i18n-placeholder="ai_input_placeholder" onkeydown="handleAiInputKey(event)">
+      <input type="text" id="aiInputField" class="ai-input-field" placeholder="Ask AirfareX: 'Which flight should I choose?'" data-i18n-placeholder="ai_input_placeholder" onkeydown="handleAiInputKey(event)">
       <button class="ai-send-btn" onclick="handleSendAiMessage()" title="Send Message" data-i18n-title="ai_btn_send">➤</button>
     </div>
   </div>
@@ -1729,14 +2717,17 @@
 
   <!-- Footer -->
   <footer class="footer">
-    <div data-i18n="footer_brand"><strong>AirfareX India</strong> — High-Frequency Aviation Pricing, Tourist Packages & Price Comparison</div>
-    <div class="footer-disclaimer" data-i18n="footer_disclaimer">
-      Prototype demonstration for aviation economics, holiday tour operators, and travel aggregators. Production deployments require authorized direct airline integrations or certified GDS feeds and must adhere to applicable data privacy guidelines.
+    <div data-i18n="footer_brand"><strong>AirfareX India</strong> — Aviation Intelligence, Flight Search &amp; Decision Platform</div>
+    <div class="footer-disclaimer" data-i18n="footer_disclaimer" style="margin-top:6px; font-size:12px; color:var(--text-muted); line-height:1.5;">
+      Current demo uses development flight data and sandbox payment. Real airline ticket issuance requires an authorized ticketing provider.
     </div>
   </footer>
 
-  <!-- Scripts: Localization, API Client, Charts & App Controller -->
+  <!-- Scripts: Localization, Supabase SDK, Auth Client, API Client, Demo Dataset, Charts & App Controller -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/js/i18n.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/demoData.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/charts.js"></script>
   <script src="/js/app.js"></script>

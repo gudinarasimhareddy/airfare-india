@@ -25,9 +25,10 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import httpx
 from pydantic import BaseModel
-from fastapi import APIRouter, HTTPException, Header, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 
 from backend.database import get_db_connection
+from backend.auth import AuthUser, get_optional_user
 from backend.models import (
     CreatePaymentOrderRequest,
     PaymentOrderResponse,
@@ -37,7 +38,8 @@ from backend.models import (
 )
 from backend.routers.tourist_plans import TOURIST_PACKAGES, _normalize_plan
 from backend.routers.google_flights import calculate_indian_flight_taxes
-from backend.supabase_client import save_booking_to_supabase
+from backend import supabase_client
+from backend.supabase_client import save_booking_to_supabase, save_payment_to_supabase
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -235,12 +237,24 @@ def calculate_price(req: CreatePaymentOrderRequest):
     return compute_trusted_price(req)
 
 @router.post("/create-order", response_model=PaymentOrderResponse)
-async def create_payment_order(req: CreatePaymentOrderRequest):
+async def create_payment_order(
+    req: CreatePaymentOrderRequest,
+    current_user: Optional[AuthUser] = Depends(get_optional_user)
+):
     """
     State: DRAFT -> PRICE_CALCULATED -> PAYMENT_PENDING
     Creates an official Razorpay order or secure Sandbox order.
-    Records draft booking in persistent SQLite database.
+    Records draft booking in persistent database.
+    Binds booking to authenticated user if session exists.
     """
+    # Production Database Fail-Safe Check
+    env = os.environ.get("ENVIRONMENT", "development").lower()
+    if env == "production" and not supabase_client.is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Production database (Supabase PostgreSQL) is not configured or unavailable. Local SQLite persistence is blocked in production mode to prevent split data instances."
+        )
+
     pricing = compute_trusted_price(req)
     amount_inr = pricing.final_payable_amount
     amount_paise = amount_inr * 100
@@ -249,6 +263,7 @@ async def create_payment_order(req: CreatePaymentOrderRequest):
         raise HTTPException(status_code=400, detail="Invalid order amount. Amount must be greater than zero.")
 
     booking_id = f"BKG-AIRX-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+    auth_uid = current_user.id if current_user else "guest"
     
     # 1. Razorpay Order Creation vs Sandbox Order Creation
     is_live = is_razorpay_live()
@@ -263,6 +278,7 @@ async def create_payment_order(req: CreatePaymentOrderRequest):
                         "currency": "INR",
                         "receipt": booking_id,
                         "notes": {
+                            "user_id": auth_uid,
                             "traveler_name": req.traveler_name or "Valued Guest",
                             "email": req.email or "guest@example.com",
                             "booking_type": req.booking_type
@@ -285,7 +301,7 @@ async def create_payment_order(req: CreatePaymentOrderRequest):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    pricing_json = json.dumps(pricing.dict())
+    pricing_json = json.dumps(pricing.model_dump() if hasattr(pricing, "model_dump") else pricing.dict())
 
     sector = f"{req.origin_code or 'HYD'} - {req.destination_code or 'DEL'}"
 
@@ -299,7 +315,7 @@ async def create_payment_order(req: CreatePaymentOrderRequest):
                 payment_order_id, pricing_breakdown
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PAYMENT_PENDING', 'DRAFT', ?, ?)
         """, (
-            booking_id, "guest", req.booking_type, req.package_id, req.flight_no,
+            booking_id, auth_uid, req.booking_type, req.package_id, req.flight_no,
             sector, req.traveler_name or "Valued Guest", req.email or "guest@example.com",
             req.phone or "+919876543210", req.travel_date or datetime.now().strftime("%Y-%m-%d"),
             req.pax_count, amount_inr, "INR", order_id, pricing_json
@@ -311,6 +327,15 @@ async def create_payment_order(req: CreatePaymentOrderRequest):
             ) VALUES (?, ?, ?, 'INR', 'CREATED')
         """, (order_id, booking_id, amount_paise))
 
+        cursor.execute("""
+            INSERT INTO booking_passengers (
+                booking_id, full_name, email, phone, passenger_type, seat_number, gender, age
+            ) VALUES (?, ?, ?, ?, 'ADULT', ?, ?, ?)
+        """, (
+            booking_id, req.traveler_name or "Valued Guest", req.email or "guest@example.com",
+            req.phone or "+919876543210", req.seat_choice or "Standard", req.gender, req.age
+        ))
+
         cursor.execute("COMMIT")
     except Exception as exc:
         cursor.execute("ROLLBACK")
@@ -318,6 +343,19 @@ async def create_payment_order(req: CreatePaymentOrderRequest):
         raise HTTPException(status_code=500, detail=f"Database error during order creation: {str(exc)}")
 
     conn.close()
+
+    # Mirror payment intent to Supabase if configured (non-blocking)
+    try:
+        await save_payment_to_supabase({
+            "order_id": order_id,
+            "booking_id": booking_id,
+            "amount": amount_inr,
+            "currency": "INR",
+            "status": "CREATED",
+            "provider": "razorpay" if is_live else "sandbox"
+        })
+    except Exception as e:
+        print(f"[Supabase payment intent note] {e}")
 
     return PaymentOrderResponse(
         order_id=order_id,
@@ -337,20 +375,30 @@ async def create_payment_order(req: CreatePaymentOrderRequest):
 @router.post("/verify", response_model=PaymentVerificationResponse)
 async def verify_payment(req: VerifyPaymentRequest):
     """
-    State: PAYMENT_PENDING -> PAYMENT_VERIFIED -> BOOKING_CONFIRMED -> TICKET_ISSUED
+    State: PAYMENT_PENDING -> PAYMENT_VERIFIED -> BOOKING_CONFIRMED
+    (TICKET_ISSUED is strictly reserved for live GDS/NDC carrier integrations)
     STRICT VERIFICATION:
-    1. Booking exists
-    2. Payment exists
-    3. req.order_id exactly equals booking.payment_order_id
-    4. Payment record belongs to the booking
-    5. Expected amount matches order amount (in paise)
-    6. Currency is INR
-    7. Payment has not already been consumed by another booking
-    8. Booking has not already been confirmed under different payment
-    9. Cryptographic HMAC-SHA256 signature verification
-    10. Real Razorpay API server-to-server check when live keys are present
-    11. Atomic SQLite transaction to issue PNR, seat, and voucher
+    1. Production database check (in production, Supabase is required)
+    2. Booking exists
+    3. Payment exists
+    4. req.order_id exactly equals booking.payment_order_id
+    5. Payment record belongs to the booking
+    6. Expected amount matches order amount (in paise)
+    7. Currency is INR
+    8. Payment has not already been consumed by another booking
+    9. Booking has not already been confirmed under different payment
+    10. Cryptographic HMAC-SHA256 signature verification
+    11. Real Razorpay API server-to-server check when live keys are present
+    12. Atomic database transaction to confirm booking and allocate seat & development PNR
     """
+    # Production Database Fail-Safe Check
+    env = os.environ.get("ENVIRONMENT", "development").lower()
+    if env == "production" and not supabase_client.is_configured():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Production database (Supabase PostgreSQL) is not configured or unavailable. Local SQLite persistence is blocked in production mode to prevent split data instances."
+        )
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -419,6 +467,8 @@ async def verify_payment(req: VerifyPaymentRequest):
                 seat_number=booking.get("seat_number"),
                 booking_type=booking.get("booking_type", "flight"),
                 invoice_number=f"INV-2026-AIRX-{booking['booking_id'][-4:]}",
+                development_notice="Development booking — airline ticket issuance is not connected in this environment.",
+                is_development_booking=True,
                 message="Booking is already confirmed and verified."
             )
         else:
@@ -553,6 +603,8 @@ async def verify_payment(req: VerifyPaymentRequest):
         seat_number=seat_num,
         booking_type=booking.get("booking_type", "flight"),
         invoice_number=invoice_no,
+        development_notice="Development booking — airline ticket issuance is not connected in this environment.",
+        is_development_booking=True,
         message=f"Payment verified and booking confirmed under PNR {pnr}!"
     )
 

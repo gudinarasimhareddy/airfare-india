@@ -117,6 +117,48 @@ OFFERS_DATABASE = [
         "baggage_perk": "Free Seat Selection Voucher",
         "expiry": "2026-12-31",
         "terms": "Applicable for travel dates at least 30 days after booking date."
+    },
+    {
+        "code": "FAMILYFLY",
+        "title": "Family Travel Group Saver",
+        "badge": "FAMILY SPECIAL",
+        "category": "promo",
+        "type": "flat",
+        "value": 2000,
+        "min_fare": 8000,
+        "applies_to": "total_fare",
+        "description": "Flat ₹2,000 instant discount for family and group bookings with 3 or more passengers.",
+        "baggage_perk": "Free Contiguous Seat Allocation",
+        "expiry": "2026-12-31",
+        "terms": "Requires 3 or more passengers on a single booking reference."
+    },
+    {
+        "code": "FESTIVAL1000",
+        "title": "Great Indian Festival Fare Drop",
+        "badge": "FESTIVAL SPECIAL",
+        "category": "promo",
+        "type": "flat",
+        "value": 1000,
+        "min_fare": 4500,
+        "applies_to": "total_fare",
+        "description": "Flat ₹1,000 savings on domestic holiday and festival flights across all routes.",
+        "baggage_perk": None,
+        "expiry": "2026-11-30",
+        "terms": "Valid across all domestic routes during the festival season."
+    },
+    {
+        "code": "FLASH999",
+        "title": "Midnight Red-Eye Flash Fare",
+        "badge": "FLASH DEAL",
+        "category": "promo",
+        "type": "flat",
+        "value": 999,
+        "min_fare": 3500,
+        "applies_to": "total_fare",
+        "description": "Flat ₹999 off on late evening and early morning red-eye flight departures.",
+        "baggage_perk": "Complimentary Hot Beverage",
+        "expiry": "2026-12-31",
+        "terms": "Valid on departures between 21:00 and 06:30 hours."
     }
 ]
 

@@ -1,36 +1,42 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union, Dict, Any
 
-class FlightItem(BaseModel):
-    id: int
-    airline: str
-    flight_no: str
-    origin: str
-    origin_code: str
-    destination: str
-    destination_code: str
-    dep_time: str
-    arr_time: str
-    duration: str
-    duration_mins: int
-    stops: str
-    base_fare: int
-    taxes: int
-    total_fare: int
-    bag_fee: int
-    emissions_kg: int
-    fare_score: int
-    tag: str
-    status: str
-    terminal: Optional[str] = "T1"
-    gate: Optional[str] = "G1"
+from backend.services.flight_providers.base import (
+    FlightSegment,
+    FlightSearchParams,
+    NormalizedFlight,
+    NormalizedSearchResponse
+)
 
-class SearchResponse(BaseModel):
-    total: int
-    origin: str
-    destination: str
-    best_fare: Optional[int] = None
-    flights: List[FlightItem]
+# For backward compatibility, FlightItem is an alias of NormalizedFlight with compatible fields
+FlightItem = NormalizedFlight
+SearchResponse = NormalizedSearchResponse
+
+class ProviderStatusResponse(BaseModel):
+    active_provider: str
+    flight_provider: Optional[str] = None
+    data_source_mode: str
+    configured: Optional[bool] = False
+    environment: Optional[str] = "test"
+    amadeus_configured: bool
+    amadeus_environment: Optional[str] = "test"
+    amadeus_readiness: str
+    live_enabled: Optional[bool] = False
+    cache_enabled: bool
+    cache_ttl_seconds: int
+    supported_providers: List[str]
+    booking_provider: Optional[Dict[str, Any]] = None
+    timestamp: str
+
+class AirportAutocompleteItem(BaseModel):
+    iata_code: str
+    icao_code: Optional[str] = None
+    name: str
+    city: str
+    state: Optional[str] = None
+    country: Optional[str] = "India"
+    display_label: str
+    short_label: str
 
 class RouteItem(BaseModel):
     id: int
@@ -178,6 +184,6 @@ class PaymentVerificationResponse(BaseModel):
     seat_number: Optional[str] = None
     booking_type: Optional[str] = "flight"
     invoice_number: Optional[str] = None
+    development_notice: Optional[str] = "Development booking — airline ticket issuance is not connected in this environment."
+    is_development_booking: bool = True
     message: str
-
-

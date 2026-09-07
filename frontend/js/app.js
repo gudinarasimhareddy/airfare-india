@@ -9,7 +9,7 @@ let state = {
   currentTab: 'home',
   sortMode: 'score',
   activeTrendPeriod: '30D',
-  theme: localStorage.getItem('airfarex_theme') || 'aurora',
+  theme: localStorage.getItem('airfarex_theme') || 'light',
   flights: [],
   routes: [],
   alerts: [],
@@ -18,7 +18,11 @@ let state = {
   overview: null,
   cpiSimulation: null,
   predictionData: null,
-  currentRefund: null
+  currentRefund: null,
+  aiRecommendations: null,
+  userPreferences: null,
+  selectedComparisonFlights: [],
+  selectedFlight: null
 };
 
 // =========================================================
@@ -239,7 +243,7 @@ function switchAdminPortalTab(subId, btn) {
 }
 
 // Navigation between customer & admin views
-function showTab(tabId, el) {
+function showTab(tabId, el, updateUrl = true) {
   let targetTab = tabId;
   let adminSubtab = null;
   if (['routes', 'index', 'quality'].includes(tabId)) {
@@ -247,25 +251,60 @@ function showTab(tabId, el) {
     adminSubtab = tabId;
   }
 
-  const sections = ['home', 'explorer', 'comparison', 'monthly-fares', 'offers', 'tourist-plans', 'prediction', 'refunds', 'admin', 'saved'];
+  const sections = ['home', 'explorer', 'comparison', 'monthly-fares', 'offers', 'tourist-plans', 'trips', 'prediction', 'refunds', 'admin', 'saved'];
   sections.forEach(id => {
     const sec = document.getElementById(id);
     if (sec) sec.classList.toggle('hidden', id !== targetTab);
   });
 
-  document.querySelectorAll('.main-nav .nav-link').forEach(link => {
+  // Clear active state on all nav elements
+  document.querySelectorAll('.main-nav .nav-link, .nav-dropdown .dropdown-link, .mobile-drawer-link').forEach(link => {
     link.classList.remove('active');
   });
-  const activeNav = el || document.querySelector(`.main-nav a[data-tab="${targetTab}"]`);
-  if (activeNav) activeNav.classList.add('active');
+
+  // Set active on matching link and its parent dropdown container if any
+  const activeNav = el || document.querySelector(`.main-nav a[data-tab="${targetTab}"], .main-nav .dropdown-link[data-tab="${targetTab}"]`);
+  if (activeNav) {
+    activeNav.classList.add('active');
+    const parentNavItem = activeNav.closest('.nav-item');
+    if (parentNavItem) {
+      const parentBtn = parentNavItem.querySelector('.nav-link');
+      if (parentBtn) parentBtn.classList.add('active');
+    }
+  }
+
+  // Update mobile drawer active states as well
+  const mobileLink = document.querySelector(`.mobile-drawer-link[data-tab="${targetTab}"]`);
+  if (mobileLink) mobileLink.classList.add('active');
 
   state.currentTab = targetTab;
+
+  // Sync URL query state without full page reload
+  if (updateUrl && typeof window !== 'undefined' && window.history && window.history.pushState) {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', targetTab);
+      if (targetTab === 'explorer') {
+        const fromVal = document.getElementById('fFrom')?.value || document.getElementById('fromCity')?.value;
+        const toVal = document.getElementById('fTo')?.value || document.getElementById('toCity')?.value;
+        const dateVal = document.getElementById('departDate')?.value;
+        if (fromVal) url.searchParams.set('from', extractAirportCode(fromVal));
+        if (toVal) url.searchParams.set('to', extractAirportCode(toVal));
+        if (dateVal) url.searchParams.set('date', dateVal);
+      }
+      window.history.pushState({ tab: targetTab }, '', url.toString());
+    } catch (e) {
+      // Ignore URL history errors in embedded contexts
+    }
+  }
 
   // Handle Admin portal subtab
   if (targetTab === 'admin') {
     const sub = adminSubtab || 'routes';
     const subBtn = document.getElementById(`adminBtn${sub.charAt(0).toUpperCase() + sub.slice(1)}`);
-    switchAdminPortalTab(sub, subBtn);
+    if (subBtn && typeof switchAdminPortalTab === 'function') {
+      switchAdminPortalTab(sub, subBtn);
+    }
   }
 
   // Trigger contextual data loads
@@ -274,12 +313,31 @@ function showTab(tabId, el) {
   if (targetTab === 'monthly-fares') loadMonthlyCalendar();
   if (targetTab === 'offers') loadOffers();
   if (targetTab === 'tourist-plans') loadTouristPlans();
+  if (targetTab === 'trips') loadMyTrips();
   if (targetTab === 'prediction') runPricePrediction();
   if (targetTab === 'refunds') trackRefundStatus('AIRX789');
   if (targetTab === 'saved') loadAlerts();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// Mobile Drawer Navigation Toggle
+function toggleMobileMenu() {
+  const drawer = document.getElementById('mobileDrawer');
+  const backdrop = document.getElementById('mobileDrawerBackdrop');
+  if (drawer && backdrop) {
+    const isOpen = drawer.classList.toggle('open');
+    backdrop.classList.toggle('open', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  }
+}
+window.toggleMobileMenu = toggleMobileMenu;
+
+// Switch directly to an Admin subtab (e.g. routes) from any menu
+function showAdminSubtab(subId) {
+  showTab(subId);
+}
+window.showAdminSubtab = showAdminSubtab;
 
 // Customer Trip Type Selector
 let currentTripType = 'oneway';
@@ -320,9 +378,18 @@ function swapOriginDest() {
     const tmp = from.value;
     from.value = to.value;
     to.value = tmp;
-    handleHomePlaceChange();
-    showToast(`Swapped: Flying ${from.value} ➔ ${to.value}`);
   }
+  const fFrom = document.getElementById('fFrom');
+  const fTo = document.getElementById('fTo');
+  if (fFrom && fTo) {
+    const tmp = fFrom.value;
+    fFrom.value = fTo.value;
+    fTo.value = tmp;
+  }
+  handleHomePlaceChange();
+  const fromLabel = from ? from.value : (fFrom ? fFrom.value : 'Origin');
+  const toLabel = to ? to.value : (fTo ? fTo.value : 'Destination');
+  showToast(`Swapped: ${fromLabel} ➔ ${toLabel}`);
 }
 
 // AI Recommendation Category Filter & Recommendations (Issue #3 & #7)
@@ -445,6 +512,9 @@ async function initApp() {
 
   // Load initial alerts count
   await loadAlerts();
+
+  // Load AI user preferences
+  await loadUserPreferences();
 }
 
 // Load National Overview Metrics
@@ -454,18 +524,32 @@ async function loadOverview() {
     state.overview = data;
 
     const elApix = document.getElementById('kpiApix');
-    if (elApix) elApix.textContent = data.national_apix.toFixed(1);
+    if (elApix) elApix.textContent = data.national_apix ? data.national_apix.toFixed(1) : '131.8';
 
     const elAvgFare = document.getElementById('kpiAvgFare');
-    if (elAvgFare) elAvgFare.textContent = `₹${data.average_domestic_fare.toLocaleString('en-IN')}`;
+    if (elAvgFare) elAvgFare.textContent = `₹${(data.average_domestic_fare || 4850).toLocaleString('en-IN')}`;
 
     const elQuotes = document.getElementById('kpiQuotes');
-    if (elQuotes) elQuotes.textContent = data.quotes_processed;
+    if (elQuotes) elQuotes.textContent = data.quotes_processed || '48,290';
 
     const elConfidence = document.getElementById('kpiConfidence');
-    if (elConfidence) elConfidence.textContent = `${data.data_confidence_pct}%`;
+    if (elConfidence) elConfidence.textContent = `${data.data_confidence_pct || 98.4}%`;
   } catch (err) {
-    console.error('Failed to load overview:', err);
+    console.debug('Using demo dataset dashboard stats fallback:', err);
+    if (window.AirfarexDemoData) {
+      const stats = window.AirfarexDemoData.getDashboardStats();
+      const elApix = document.getElementById('kpiApix');
+      if (elApix) elApix.textContent = '132.4';
+
+      const elAvgFare = document.getElementById('kpiAvgFare');
+      if (elAvgFare) elAvgFare.textContent = `₹${stats.avgPrice.toLocaleString('en-IN')}`;
+
+      const elQuotes = document.getElementById('kpiQuotes');
+      if (elQuotes) elQuotes.textContent = `${stats.totalFlights * 1850}+`;
+
+      const elConfidence = document.getElementById('kpiConfidence');
+      if (elConfidence) elConfidence.textContent = '99.2%';
+    }
   }
 }
 
@@ -484,53 +568,612 @@ async function loadTrendChart(period = '30D') {
   }
 }
 
-// Flight Search
+// =========================================================
+// HOMEPAGE FEATURED FLIGHT DISCOVERY & INTELLIGENCE
+// =========================================================
+
+async function loadHomepageFeaturedFlights(orig = 'DEL', dest = 'BOM') {
+  const container = document.getElementById('homeFlightResults');
+  if (container) {
+    container.innerHTML = `
+      <div class="skeleton-card">
+        <div class="skeleton-shimmer"></div>
+        <div class="skeleton-line lg" style="width:32%;"></div>
+        <div class="skeleton-line md" style="width:65%;"></div>
+        <div class="skeleton-line sm" style="width:40%;"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-shimmer"></div>
+        <div class="skeleton-line lg" style="width:28%;"></div>
+        <div class="skeleton-line md" style="width:58%;"></div>
+        <div class="skeleton-line sm" style="width:45%;"></div>
+      </div>
+    `;
+  }
+
+  const routeBadge = document.getElementById('homeFeaturedRouteBadge');
+  if (routeBadge) routeBadge.textContent = `✈ ${orig} ➔ ${dest} · Today's Flight Deals`;
+
+  const compBadge = document.getElementById('instantCompRouteBadge');
+  if (compBadge) compBadge.textContent = `✈ ${orig} ➔ ${dest} · Instant Comparison`;
+
+  try {
+    let flights = [];
+    let bestFare = 0;
+    let envelope = null;
+    let aiRec = null;
+
+    // First try demo data provider if loaded
+    if (window.AirfarexDemoData) {
+      flights = window.AirfarexDemoData.filterFlights({ from_city: orig, to_city: dest });
+      if (flights.length > 0) {
+        bestFare = Math.min(...flights.map(f => f.totalPrice || f.total_fare));
+        envelope = { data_source: 'DEMO', provider: 'AirfareX Master Demo Dataset', cached: false };
+        aiRec = window.AirfarexDemoData.getRecommendations(flights);
+      }
+    }
+
+    // Try backend if demo dataset did not match or for live sync
+    if (!flights || flights.length === 0) {
+      try {
+        const searchParams = { from_city: orig, to_city: dest };
+        const data = await window.api.searchFlights(searchParams);
+        if (data && data.flights && data.flights.length > 0) {
+          flights = data.flights;
+          bestFare = data.best_fare || Math.min(...flights.map(f => f.total_fare));
+          envelope = data;
+        }
+      } catch (apiErr) {
+        console.warn('Backend search fallback to demo data:', apiErr);
+      }
+    }
+
+    // If still empty, fall back to master list
+    if (!flights || flights.length === 0) {
+      flights = window.AirfarexDemoData ? window.AirfarexDemoData.getAllFlights().slice(0, 6) : [];
+      bestFare = flights.length > 0 ? Math.min(...flights.map(f => f.totalPrice)) : 4290;
+      envelope = { data_source: 'DEMO', provider: 'AirfareX Master Dataset' };
+      aiRec = window.AirfarexDemoData ? window.AirfarexDemoData.getRecommendations(flights) : null;
+    }
+
+    // Update data source badge
+    const srcBadge = document.getElementById('homeFeaturedDataSourceBadge');
+    if (srcBadge) {
+      srcBadge.className = 'data-source-pill badge-live';
+      srcBadge.textContent = 'DEMO ACTIVE (26+ Flights)';
+      srcBadge.style.cssText = 'background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);';
+    }
+
+    const subtitle = document.getElementById('homeFeaturedSubtitle');
+    if (subtitle) {
+      subtitle.textContent = `Showing ${flights.length} verified demo flights for ${orig} ➔ ${dest} · Best Fare: ₹${bestFare.toLocaleString('en-IN')} · Deterministic Scoring & DGCA Breakdown`;
+    }
+
+    // Render recommendations and cards
+    renderHomeAiRecommendationsSummary(aiRec);
+    renderHomeFlightCards(flights, bestFare, envelope, aiRec);
+
+    // Fetch and render Price Intelligence
+    try {
+      const predData = await window.api.predictPrice(orig, dest);
+      renderHomePriceIntelligence(predData, orig, dest);
+    } catch (pErr) {
+      console.debug('Price prediction fallback:', pErr);
+    }
+
+    // Also update comparison matrix for this sector
+    renderInstantSectorComparison('home', orig, dest);
+
+  } catch (err) {
+    console.error('Failed to load homepage featured flights:', err);
+    if (container) {
+      container.innerHTML = `
+        <div class="friendly-error-card">
+          <div class="friendly-error-icon">📡</div>
+          <h3 class="friendly-error-title">Unable to Fetch Flight Deals</h3>
+          <p class="friendly-error-desc">Could not retrieve development schedules for ${orig} ➔ ${dest}.</p>
+          <button class="btn primary sm" onclick="loadHomepageFeaturedFlights('${orig}', '${dest}')">Retry</button>
+        </div>
+      `;
+    }
+  }
+}
+
+// Render AI 4-Card Summary Bar on Homepage
+function renderHomeAiRecommendationsSummary(rec) {
+  const banner = document.getElementById('homeAiSummaryGrid');
+  if (!banner || !rec) {
+    if (banner) banner.innerHTML = '';
+    return;
+  }
+
+  const pick = rec.airfarex_pick;
+  const bestVal = rec.best_value;
+  const cheapest = rec.cheapest;
+  const fastest = rec.fastest;
+
+  if (!pick && !cheapest && !fastest) {
+    banner.innerHTML = '';
+    return;
+  }
+
+  banner.innerHTML = `
+    <!-- 1. AirfareX Pick / Best Overall -->
+    ${pick ? `
+      <div class="ai-rec-card card-pick" onclick="openFlightDetailsModal('${pick.flightNumber || pick.flight_no}')" title="Click to view full flight details & score breakdown" style="cursor:pointer;">
+        <div class="ai-rec-card-tag">👑 Best Overall</div>
+        <div class="ai-rec-flight-title">${pick.airline} · ${pick.flightNumber || pick.flight_no}</div>
+        <div class="ai-rec-flight-sub">${pick.duration} · ${pick.stops}</div>
+        <div class="ai-rec-price-row">
+          <span class="ai-rec-price">₹${(pick.totalPrice || pick.total_fare).toLocaleString('en-IN')}</span>
+          <span class="ai-rec-score-pill">⭐ ${pick.overallScore || pick.scores?.overall_score || 92}/100</span>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- 2. Best Value -->
+    ${bestVal ? `
+      <div class="ai-rec-card card-best-value" onclick="openFlightDetailsModal('${bestVal.flightNumber || bestVal.flight_no}')" title="Click to view full flight details & score breakdown" style="cursor:pointer;">
+        <div class="ai-rec-card-tag">💎 Best Value</div>
+        <div class="ai-rec-flight-title">${bestVal.airline} · ${bestVal.flightNumber || bestVal.flight_no}</div>
+        <div class="ai-rec-flight-sub">${bestVal.duration} · ${bestVal.stops}</div>
+        <div class="ai-rec-price-row">
+          <span class="ai-rec-price">₹${(bestVal.totalPrice || bestVal.total_fare).toLocaleString('en-IN')}</span>
+          <span class="ai-rec-score-pill" style="background:rgba(16,185,129,0.15); color:#34d399;">⭐ ${bestVal.overallScore || 90}/100</span>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- 3. Lowest Price -->
+    ${cheapest ? `
+      <div class="ai-rec-card card-cheapest" onclick="openFlightDetailsModal('${cheapest.flightNumber || cheapest.flight_no}')" title="Click to view full flight details & score breakdown" style="cursor:pointer;">
+        <div class="ai-rec-card-tag">💸 Lowest Price</div>
+        <div class="ai-rec-flight-title">${cheapest.airline} · ${cheapest.flightNumber || cheapest.flight_no}</div>
+        <div class="ai-rec-flight-sub">${cheapest.duration} · ${cheapest.stops}</div>
+        <div class="ai-rec-price-row">
+          <span class="ai-rec-price">₹${(cheapest.totalPrice || cheapest.total_fare).toLocaleString('en-IN')}</span>
+          <span class="ai-rec-score-pill" style="background:rgba(14,165,233,0.15); color:#38bdf8;">Base ₹${(cheapest.basePrice || cheapest.base_fare || (cheapest.totalPrice - 800)).toLocaleString('en-IN')}</span>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- 4. Fastest Travel -->
+    ${fastest ? `
+      <div class="ai-rec-card card-fastest" onclick="openFlightDetailsModal('${fastest.flightNumber || fastest.flight_no}')" title="Click to view full flight details & score breakdown" style="cursor:pointer;">
+        <div class="ai-rec-card-tag">⚡ Fastest Travel</div>
+        <div class="ai-rec-flight-title">${fastest.airline} · ${fastest.flightNumber || fastest.flight_no}</div>
+        <div class="ai-rec-flight-sub">${fastest.duration} · Non-stop</div>
+        <div class="ai-rec-price-row">
+          <span class="ai-rec-price">₹${(fastest.totalPrice || fastest.total_fare).toLocaleString('en-IN')}</span>
+          <span class="ai-rec-score-pill" style="background:rgba(245,158,11,0.15); color:#fbbf24;">${fastest.duration}</span>
+        </div>
+      </div>
+    ` : ''}
+  `;
+}
+
+// Render Polished Flight Result Cards on Homepage
+function renderHomeFlightCards(flights, bestFare, searchEnvelope = null, aiRec = null) {
+  const container = document.getElementById('homeFlightResults');
+  if (!container) return;
+
+  if (!flights || !flights.length) {
+    container.innerHTML = `
+      <div class="friendly-empty-card">
+        <div class="friendly-empty-icon">✈️</div>
+        <h3 class="friendly-empty-title">No Flights Available for this Exact Sector</h3>
+        <p class="friendly-empty-desc">Explore one of our high-frequency demo sectors with comprehensive pricing & scores:</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:14px 0;">
+          <button class="btn sm light" onclick="selectDemoRoute('HYD', 'DEL')">⚡ Hyderabad ➔ Delhi</button>
+          <button class="btn sm light" onclick="selectDemoRoute('HYD', 'BOM')">⚡ Hyderabad ➔ Mumbai</button>
+          <button class="btn sm light" onclick="selectDemoRoute('BLR', 'DEL')">⚡ Bengaluru ➔ Delhi</button>
+          <button class="btn sm light" onclick="selectDemoRoute('BOM', 'DEL')">⚡ Mumbai ➔ Delhi</button>
+          <button class="btn sm green" onclick="exploreDemoFlights()">🌐 View All 20+ Demo Flights</button>
+        </div>
+        <button class="btn primary sm" onclick="loadHomepageFeaturedFlights('HYD', 'DEL')">Reset to HYD ➔ DEL</button>
+      </div>
+    `;
+    return;
+  }
+
+  const cardsHtml = flights.map((f, idx) => {
+    const flightNo = f.flightNumber || f.flight_no || `6E-${idx+200}`;
+    const airline = f.airline || 'IndiGo';
+    const airlineClass = `airline-${airline.toLowerCase().replace(/\s+/g, '-')}`;
+    const totFare = f.totalPrice || f.total_fare || 4500;
+    const baseFare = f.basePrice || f.base_fare || Math.round(totFare * 0.8);
+    const taxes = f.taxes || f.taxes_fees || (totFare - baseFare);
+    const depTime = f.departureTime || f.dep_time || '07:15';
+    const arrTime = f.arrivalTime || f.arr_time || '09:30';
+    const origCode = f.origin || f.origin_code || 'HYD';
+    const destCode = f.destination || f.destination_code || 'DEL';
+    const duration = f.duration || '2h 15m';
+    const stops = f.stops || 'Nonstop';
+
+    // Scoring metrics
+    const overallScore = f.overallScore || f.fare_score || 92;
+    const scoreRating = f.scoreRating || (overallScore >= 90 ? 'Excellent' : (overallScore >= 80 ? 'Very Good' : 'Good'));
+    const ratingClass = overallScore >= 90 ? 'excellent' : (overallScore >= 80 ? 'very-good' : (overallScore >= 70 ? 'good' : 'average'));
+    const priceScore = f.priceScore || 92;
+    const relScore = f.reliabilityScore || 95;
+    const punctScore = f.punctualityScore || f.onTimePercentage || 94;
+    const comfScore = f.comfortScore || 88;
+
+    // Smart Badge
+    let badgeText = f.recommendation || (totFare <= (bestFare || 4500) ? 'Lowest Price' : (stops === 'Nonstop' ? 'Best Value' : 'Standard'));
+    let badgeClass = 'best-value';
+    if (badgeText.toLowerCase().includes('overall') || badgeText.toLowerCase().includes('pick')) badgeClass = 'airfarex-pick';
+    else if (badgeText.toLowerCase().includes('lowest') || badgeText.toLowerCase().includes('price') || badgeText.toLowerCase().includes('cheapest')) badgeClass = 'cheapest';
+    else if (badgeText.toLowerCase().includes('fastest') || badgeText.toLowerCase().includes('quick')) badgeClass = 'fastest';
+
+    const initials = airline.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
+
+    return `
+      <div class="flight-card ${airlineClass}" id="homeFlightCard_${flightNo.replace(/\s+/g, '_')}" style="margin-bottom:14px;">
+        <div class="flight-row-main">
+          <!-- Airline Brand & Initials/Flight No -->
+          <div class="flight-airline">
+            <div class="airline-name">
+              <span class="airline-avatar" style="display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; background:var(--brand-blue-light, rgba(2,132,199,0.15)); color:var(--brand-blue, #0284c7); font-weight:800; font-size:12px;">${initials}</span>
+              <div>
+                <b style="font-size:15px; color:var(--text-main);">${airline}</b>
+                <span class="flight-no-tag" style="margin-left:4px;">${flightNo}</span>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:6px; flex-wrap:wrap;">
+              <span class="smart-badge ${badgeClass}" style="font-size:10px; font-weight:800; padding:3px 8px; border-radius:4px; text-transform:uppercase;">${badgeText}</span>
+              <span class="score-badge-indicator ${ratingClass}" title="Composite Weighted Score">⭐ ${overallScore}/100 — ${scoreRating}</span>
+            </div>
+          </div>
+
+          <!-- Schedule Times & Route -->
+          <div class="flight-schedule">
+            <div class="flight-time-col">
+              <span class="flight-time">${depTime}</span>
+              <span class="flight-airport-code">${origCode}</span>
+            </div>
+
+            <div class="flight-duration-col">
+              <span class="duration-text">${duration}</span>
+              <div class="route-line-wrap">
+                <div class="route-line"></div>
+                <div class="route-plane-icon">✈</div>
+              </div>
+              <span class="stops-text ${stops === 'Nonstop' ? 'nonstop' : ''}">${stops}</span>
+            </div>
+
+            <div class="flight-time-col">
+              <span class="flight-time">${arrTime}</span>
+              <span class="flight-airport-code">${destCode}</span>
+            </div>
+          </div>
+
+          <!-- Fare Breakdown & Total -->
+          <div class="flight-fare-col">
+            <div class="flight-fare">₹${totFare.toLocaleString('en-IN')}</div>
+            <div class="flight-fare-sub" style="font-size:11px; color:var(--text-muted);">
+              Base: ₹${baseFare.toLocaleString('en-IN')} + Taxes: ₹${taxes.toLocaleString('en-IN')}
+            </div>
+            <div style="font-size:10.5px; color:var(--brand-mint, #10b981); font-weight:600;">✓ All Taxes & Fees Included</div>
+          </div>
+
+          <!-- Actions: Book Now, View Details, Compare, Why -->
+          <div class="flight-actions-col" style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+            <button class="btn green sm" onclick="selectFlight('${airline}', '${flightNo}', ${totFare}, '${destCode}', '${destCode}')" style="min-width:120px; font-weight:700; padding:8px 14px;">Book Now ➔</button>
+            <div style="display:flex; gap:4px;">
+              <button class="btn sm light" onclick="openFlightDetailsModal('${flightNo}')" title="View Full Details & Score Breakdown" style="padding:4px 8px; font-size:11.5px;">📋 Details</button>
+              <button class="btn sm light" onclick="quickAddToComparison('${flightNo}')" title="Compare this flight" style="padding:4px 8px; font-size:11.5px;">⚖️ Compare</button>
+              <button class="btn sm light" onclick="openWhyThisFlightModal('${flightNo}')" title="Why this score?" style="padding:4px 8px; font-size:11.5px;">💡 Why?</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Requirement 3: Sub-scores strip -->
+        <div class="flight-subscores-strip">
+          <span class="subscore-item price">💸 Price Score: <b>${priceScore}/100</b></span>
+          <span style="color:rgba(255,255,255,0.15);">·</span>
+          <span class="subscore-item reliability">🛡️ Reliability: <b>${relScore}/100</b></span>
+          <span style="color:rgba(255,255,255,0.15);">·</span>
+          <span class="subscore-item punctuality">⏱️ Punctuality: <b>${punctScore}/100</b></span>
+          <span style="color:rgba(255,255,255,0.15);">·</span>
+          <span class="subscore-item comfort">💺 Comfort: <b>${comfScore}/100</b></span>
+          <span style="margin-left:auto; font-size:11px; color:var(--text-muted);">🧳 ${f.baggage || '7kg Cabin + 15kg Checked'}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = cardsHtml;
+}
+
+// 1-Click Explore All 20+ Demo Flights
+function exploreDemoFlights() {
+  showTab('explorer', document.querySelector('.main-nav a[data-tab=\'explorer\']'));
+  const fFrom = document.getElementById('fFrom');
+  const fTo = document.getElementById('fTo');
+  if (fFrom) fFrom.value = '';
+  if (fTo) fTo.value = '';
+  resetFlightFilters();
+  showToast('Loaded all 26+ master demo flights with complete score rankings.');
+}
+
+// 1-Click Select Demo Route
+function selectDemoRoute(orig, dest) {
+  const fFrom = document.getElementById('fFrom');
+  const fTo = document.getElementById('fTo');
+  const fromCity = document.getElementById('fromCity');
+  const toCity = document.getElementById('toCity');
+
+  if (fFrom) fFrom.value = orig;
+  if (fTo) fTo.value = dest;
+  if (fromCity) fromCity.value = `${orig} (${orig})`;
+  if (toCity) toCity.value = `${dest} (${dest})`;
+
+  showTab('explorer', document.querySelector('.main-nav a[data-tab=\'explorer\']'));
+  loadFlights();
+  showToast(`Filtering demo flights for ${orig} ➔ ${dest}`);
+}
+
+// Render Price Intelligence on Homepage
+function renderHomePriceIntelligence(predData, orig, dest) {
+  if (!predData) return;
+
+  const sectorBadge = document.getElementById('homePriceSectorBadge');
+  if (sectorBadge) sectorBadge.textContent = `${orig} ➔ ${dest} Sector`;
+
+  const signalBadge = document.getElementById('homePriceSignalBadge');
+  if (signalBadge) {
+    if (predData.recommendation === 'BUY_NOW') {
+      signalBadge.className = 'badge green';
+      signalBadge.textContent = '● BUY NOW RECOMMENDED';
+    } else {
+      signalBadge.className = 'badge orange';
+      signalBadge.textContent = '● WAIT FOR PRICE DROP';
+    }
+  }
+
+  const confBadge = document.getElementById('homePriceConfBadge');
+  if (confBadge) confBadge.textContent = `${predData.confidence_pct || 89}% Confidence`;
+
+  const currentFareEl = document.getElementById('homePriceCurrentFare');
+  if (currentFareEl) currentFareEl.textContent = `₹${(predData.current_fare || 3980).toLocaleString('en-IN')}`;
+
+  const deltaText = document.getElementById('homePriceDeltaText');
+  if (deltaText) {
+    const delta = Math.abs(predData.expected_delta_inr || 1250);
+    deltaText.textContent = `Potential Savings: ₹${delta.toLocaleString('en-IN')} ${predData.recommendation === 'BUY_NOW' ? 'before surge' : 'if you wait'}`;
+  }
+
+  const signalDesc = document.getElementById('homePriceSignalDesc');
+  if (signalDesc && predData.recommendation_desc) {
+    signalDesc.textContent = predData.recommendation_desc;
+  }
+
+  const optimalWin = document.getElementById('homePriceOptimalWindow');
+  if (optimalWin && predData.optimal_booking_window) {
+    optimalWin.textContent = `Optimal Booking Window: ${predData.optimal_booking_window}.`;
+  }
+
+  const driversList = document.getElementById('homePriceDriversList');
+  if (driversList && predData.price_drivers && predData.price_drivers.length) {
+    driversList.innerHTML = predData.price_drivers.slice(0, 3).map(driver => `
+      <div style="font-size:12px; color:var(--text-secondary); display:flex; align-items:flex-start; gap:6px;">
+        <span style="color:var(--brand-blue);">•</span> ${driver}
+      </div>
+    `).join('');
+  }
+}
+
+// Send conversational prompt directly into AI Copilot
+function sendPromptToAi(promptText) {
+  const windowEl = document.getElementById('aiChatWindow');
+  if (windowEl && windowEl.classList.contains('hidden')) {
+    toggleAiAssistant();
+  }
+  handleSendAiMessage(promptText);
+}
+
+// Quick Add Flight to Comparison Matrix
+function quickAddToComparison(flightNo) {
+  const flight = (state.flights || []).find(f => (f.flightNumber || f.flight_no) === flightNo);
+  if (!flight) {
+    showToast(`Flight ${flightNo} selected for comparison.`);
+    showTab('comparison');
+    return;
+  }
+  if (!state.selectedComparisonFlights.some(f => (f.flightNumber || f.flight_no) === flightNo)) {
+    state.selectedComparisonFlights.push(flight);
+  }
+  showToast(`Added ${flightNo} to comparison matrix.`);
+  showTab('comparison');
+}
+
+// Dual Search Trigger: Updates Home results if on Home, otherwise opens Explorer
+async function triggerHomeOrExplorerSearch() {
+  const fromVal = document.getElementById('fromCity')?.value || 'DEL';
+  const toVal = document.getElementById('toCity')?.value || 'BOM';
+  const orig = extractAirportCode(fromVal);
+  const dest = extractAirportCode(toVal);
+
+  const fFrom = document.getElementById('fFrom');
+  const fTo = document.getElementById('fTo');
+  if (fFrom) fFrom.value = orig;
+  if (fTo) fTo.value = dest;
+
+  if (state.currentTab === 'home') {
+    showToast(`Searching flights for ${orig} ➔ ${dest}...`);
+    await loadHomepageFeaturedFlights(orig, dest);
+    const featuredSec = document.getElementById('homeFeaturedSection');
+    if (featuredSec) {
+      featuredSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  } else {
+    await triggerSearch();
+  }
+}
+
+// Flight Search (Explorer tab)
 async function triggerSearch() {
-  const fromCity = document.getElementById('fromCity').value;
-  const toCity = document.getElementById('toCity').value;
+  const fromCity = document.getElementById('fromCity')?.value || 'DEL';
+  const toCity = document.getElementById('toCity')?.value || 'BOM';
+  const orig = extractAirportCode(fromCity);
+  const dest = extractAirportCode(toCity);
+
+  const fFrom = document.getElementById('fFrom');
+  const fTo = document.getElementById('fTo');
+  if (fFrom) fFrom.value = orig;
+  if (fTo) fTo.value = dest;
 
   const statusBox = document.getElementById('searchResultBox');
   if (statusBox) {
     statusBox.classList.remove('hidden');
-    statusBox.innerHTML = `Searching real flights for <b>${fromCity} → ${toCity}</b>...`;
+    statusBox.innerHTML = `Searching flights for <b>${orig} → ${dest}</b>...`;
   }
 
   const explorerNav = document.querySelector('.main-nav a[data-tab="explorer"]');
   showTab('explorer', explorerNav);
-
-  const expFrom = document.getElementById('fFrom');
-  const expTo = document.getElementById('fTo');
-  if (expFrom) expFrom.value = fromCity;
-  if (expTo) expTo.value = toCity;
-
   await loadFlights();
 }
 
-// Load Flights with Filters & Sorting
+// =========================================================
+// PHASE 7 & 8: NATURAL LANGUAGE FLIGHT SEARCH & AI REASONING
+// =========================================================
+
+async function executeNlSearch(inputId = 'heroNlSearchInput') {
+  const inputEl = document.getElementById(inputId);
+  if (!inputEl) return;
+  const query = inputEl.value.trim();
+  if (!query) {
+    showToast('Please enter a flight query (e.g., Delhi to Mumbai tomorrow under ₹6,000)', false);
+    return;
+  }
+
+  showToast('Interpreting natural language search with AirfareX AI...');
+
+  try {
+    const res = await window.api.interpretSearch(query);
+
+    if (res.clarification_needed && res.clarification_message) {
+      showToast(res.clarification_message, false);
+      return;
+    }
+
+    // Populate search inputs
+    if (res.origin) {
+      const fFrom = document.getElementById('fFrom');
+      const fromCity = document.getElementById('fromCity');
+      if (fFrom) fFrom.value = res.origin;
+      if (fromCity) fromCity.value = `${res.origin} (${res.origin})`;
+    }
+    if (res.destination) {
+      const fTo = document.getElementById('fTo');
+      const toCity = document.getElementById('toCity');
+      if (fTo) fTo.value = res.destination;
+      if (toCity) toCity.value = `${res.destination} (${res.destination})`;
+    }
+    if (res.date) {
+      const depDate = document.getElementById('departDate');
+      if (depDate) depDate.value = res.date;
+    }
+    if (res.stops && res.stops !== 'Any') {
+      const fStops = document.getElementById('fStops');
+      if (fStops) fStops.value = res.stops;
+    }
+    if (res.airline && res.airline !== 'All airlines') {
+      const fAir = document.getElementById('fAir');
+      if (fAir) fAir.value = res.airline;
+    }
+    if (res.preference) {
+      if (res.preference === 'lowest_price') setSort('price');
+      else if (res.preference === 'fastest') setSort('duration');
+      else setSort('score');
+    }
+
+    // Switch to explorer tab and trigger search
+    const explorerNav = document.querySelector('.main-nav a[data-tab="explorer"]');
+    showTab('explorer', explorerNav);
+
+    showToast(`AI matched: ${res.origin || 'Origin'} ➔ ${res.destination || 'Dest'} (${res.stops || 'Any stops'}, ${res.preference || 'Best Value'})`);
+    await loadFlights();
+  } catch (err) {
+    console.error('NL Search interpretation failed:', err);
+    showToast('Could not interpret query. Please use standard search inputs.', false);
+  }
+}
+
+function setNlQuery(query, inputId = 'heroNlSearchInput') {
+  const inputEl = document.getElementById(inputId);
+  if (inputEl) {
+    inputEl.value = query;
+    executeNlSearch(inputId);
+  }
+}
+
+// Reset Flight Filters
+function resetFlightFilters() {
+  const fStops = document.getElementById('fStops');
+  const fAir = document.getElementById('fAir');
+  const fPrice = document.getElementById('fPrice');
+  const fTime = document.getElementById('fTime');
+  const fMinScore = document.getElementById('fMinScore');
+  const fCabin = document.getElementById('fCabin');
+  const directToggle = document.getElementById('directToggle');
+  const bagsToggle = document.getElementById('bagsToggle');
+
+  if (fStops) fStops.value = 'Any';
+  if (fAir) fAir.value = 'All airlines';
+  if (fPrice) fPrice.value = 'Any';
+  if (fTime) fTime.value = 'Any time';
+  if (fMinScore) fMinScore.value = '0';
+  if (fCabin) fCabin.value = 'Any';
+  if (directToggle) directToggle.checked = false;
+  if (bagsToggle) bagsToggle.checked = false;
+
+  loadFlights();
+}
+
+// Load Flights in Explorer with AI Scoring & Badge Integration
 async function loadFlights() {
   const resultsContainer = document.getElementById('flightResults');
   if (resultsContainer) {
-    resultsContainer.innerHTML = '<div class="empty-box">Searching domestic airline schedules & live quotes...</div>';
+    resultsContainer.innerHTML = `
+      <div class="skeleton-card">
+        <div class="skeleton-shimmer"></div>
+        <div class="skeleton-line lg" style="width:32%;"></div>
+        <div class="skeleton-line md" style="width:65%;"></div>
+        <div class="skeleton-line sm" style="width:40%;"></div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-shimmer"></div>
+        <div class="skeleton-line lg" style="width:28%;"></div>
+        <div class="skeleton-line md" style="width:58%;"></div>
+        <div class="skeleton-line sm" style="width:45%;"></div>
+      </div>
+    `;
   }
 
-  const fromCity = document.getElementById('fFrom')?.value || document.getElementById('fromCity')?.value || 'HYD';
-  const toCity = document.getElementById('fTo')?.value || document.getElementById('toCity')?.value || 'DEL';
+  const fromCity = document.getElementById('fFrom')?.value || document.getElementById('fromCity')?.value || '';
+  const toCity = document.getElementById('fTo')?.value || document.getElementById('toCity')?.value || '';
+  const orig = fromCity.trim() ? extractAirportCode(fromCity) : '';
+  const dest = toCity.trim() ? extractAirportCode(toCity) : '';
   const stops = document.getElementById('fStops')?.value || 'Any';
   const airline = document.getElementById('fAir')?.value || 'All airlines';
   const maxPriceVal = document.getElementById('fPrice')?.value || 'Any';
-  const baggage = document.getElementById('fBag')?.value || 'Any';
   const timeOfDay = document.getElementById('fTime')?.value || 'Any time';
+  const minScoreVal = document.getElementById('fMinScore')?.value || '0';
+  const cabinVal = document.getElementById('fCabin')?.value || 'Any';
   const directOnly = document.getElementById('directToggle')?.checked || false;
 
   const params = {
-    from_city: fromCity,
-    to_city: toCity,
+    from_city: orig,
+    to_city: dest,
     stops: stops,
     airline: airline,
-    baggage: baggage,
     time_of_day: timeOfDay,
+    min_score: parseInt(minScoreVal) || 0,
+    cabin: cabinVal,
     direct_only: directOnly,
-    sort_by: state.sortMode
+    sort_by: state.sortMode || 'score'
   };
 
   if (maxPriceVal !== 'Any') {
@@ -538,27 +1181,150 @@ async function loadFlights() {
   }
 
   try {
-    const data = await window.api.searchFlights(params);
-    state.flights = data.flights;
-    renderFlightCards(data.flights, data.best_fare);
+    let flights = [];
+    let bestFare = 0;
+    let envelope = { data_source: 'DEMO', provider: 'AirfareX Centralized Master Dataset' };
+
+    // Query demo dataset directly
+    if (window.AirfarexDemoData) {
+      flights = window.AirfarexDemoData.filterFlights(params);
+      if (flights.length > 0) {
+        bestFare = Math.min(...flights.map(f => f.totalPrice || f.total_fare));
+      }
+    }
+
+    // If empty and user searched an unlisted route, try backend API
+    if (flights.length === 0 && orig && dest) {
+      try {
+        const data = await window.api.searchFlights(params);
+        if (data && data.flights && data.flights.length > 0) {
+          flights = data.flights;
+          bestFare = data.best_fare || Math.min(...flights.map(f => f.total_fare));
+          envelope = data;
+        }
+      } catch (apiErr) {
+        console.warn('API fetch fallback:', apiErr);
+      }
+    }
+
+    state.flights = flights;
+
+    // Phase 7: Compute recommendations
+    const rec = window.AirfarexDemoData ? window.AirfarexDemoData.getRecommendations(flights) : null;
+    state.aiRecommendations = rec;
+    renderAiRecommendationsSummary(rec);
+
+    renderFlightCards(flights, bestFare, envelope);
   } catch (err) {
+    console.error('Failed to load flights:', err);
     if (resultsContainer) {
-      resultsContainer.innerHTML = `<div class="empty-box">Error loading flights. Please verify API server status.</div>`;
+      resultsContainer.innerHTML = `
+        <div class="friendly-error-card">
+          <div class="friendly-error-icon">📡</div>
+          <h3 class="friendly-error-title">Unable to Fetch Flight Data</h3>
+          <p class="friendly-error-desc">We could not retrieve flight schedules for ${orig} ➔ ${dest}.</p>
+          <button class="btn primary sm" onclick="loadFlights()">Retry Search</button>
+        </div>
+      `;
     }
   }
 }
 
-// Render Flight Result Cards
-function renderFlightCards(flights, bestFare) {
+// Render AI 4-Card Summary Bar (Cheapest / Fastest / Best Value / AirfareX Pick) in Explorer
+function renderAiRecommendationsSummary(rec) {
+  const banner = document.getElementById('aiRecSummaryGrid');
+  if (!banner || !rec) {
+    if (banner) banner.classList.add('hidden');
+    return;
+  }
+
+  const pick = rec.airfarex_pick;
+  const bestVal = rec.best_value;
+  const cheapest = rec.cheapest;
+  const fastest = rec.fastest;
+
+  if (!pick && !cheapest && !fastest) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  banner.classList.remove('hidden');
+  banner.innerHTML = `
+    <!-- 1. Best Overall / AirfareX Pick -->
+    ${pick ? `
+      <div class="ai-rec-card card-pick" onclick="openFlightDetailsModal('${pick.flightNumber || pick.flight_no}')" title="Click to view AI score reasoning" style="cursor:pointer;">
+        <div class="ai-rec-card-tag">👑 Best Overall</div>
+        <div class="ai-rec-flight-title">${pick.airline} · ${pick.flightNumber || pick.flight_no}</div>
+        <div class="ai-rec-flight-sub">${pick.duration} · ${pick.stops}</div>
+        <div class="ai-rec-price-row">
+          <span class="ai-rec-price">₹${(pick.totalPrice || pick.total_fare).toLocaleString('en-IN')}</span>
+          <span class="ai-rec-score-pill">⭐ ${pick.overallScore || 92}/100</span>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- 2. Best Value -->
+    ${bestVal ? `
+      <div class="ai-rec-card card-best-value" onclick="openFlightDetailsModal('${bestVal.flightNumber || bestVal.flight_no}')" title="Click to view AI score reasoning" style="cursor:pointer;">
+        <div class="ai-rec-card-tag">💎 Best Value</div>
+        <div class="ai-rec-flight-title">${bestVal.airline} · ${bestVal.flightNumber || bestVal.flight_no}</div>
+        <div class="ai-rec-flight-sub">${bestVal.duration} · ${bestVal.stops}</div>
+        <div class="ai-rec-price-row">
+          <span class="ai-rec-price">₹${(bestVal.totalPrice || bestVal.total_fare).toLocaleString('en-IN')}</span>
+          <span class="ai-rec-score-pill" style="background:rgba(16,185,129,0.15); color:#34d399;">⭐ ${bestVal.overallScore || 90}/100</span>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- 3. Lowest Price -->
+    ${cheapest ? `
+      <div class="ai-rec-card card-cheapest" onclick="openFlightDetailsModal('${cheapest.flightNumber || cheapest.flight_no}')" title="Click to view AI score reasoning" style="cursor:pointer;">
+        <div class="ai-rec-card-tag">💸 Lowest Price</div>
+        <div class="ai-rec-flight-title">${cheapest.airline} · ${cheapest.flightNumber || cheapest.flight_no}</div>
+        <div class="ai-rec-flight-sub">${cheapest.duration} · ${cheapest.stops}</div>
+        <div class="ai-rec-price-row">
+          <span class="ai-rec-price">₹${(cheapest.totalPrice || cheapest.total_fare).toLocaleString('en-IN')}</span>
+          <span class="ai-rec-score-pill" style="background:rgba(14,165,233,0.15); color:#38bdf8;">Base Fare</span>
+        </div>
+      </div>
+    ` : ''}
+
+    <!-- 4. Fastest Travel -->
+    ${fastest ? `
+      <div class="ai-rec-card card-fastest" onclick="openFlightDetailsModal('${fastest.flightNumber || fastest.flight_no}')" title="Click to view AI score reasoning" style="cursor:pointer;">
+        <div class="ai-rec-card-tag">⚡ Fastest Travel</div>
+        <div class="ai-rec-flight-title">${fastest.airline} · ${fastest.flightNumber || fastest.flight_no}</div>
+        <div class="ai-rec-flight-sub">${fastest.duration} · Non-stop</div>
+        <div class="ai-rec-price-row">
+          <span class="ai-rec-price">₹${(fastest.totalPrice || fastest.total_fare).toLocaleString('en-IN')}</span>
+          <span class="ai-rec-score-pill" style="background:rgba(245,158,11,0.15); color:#fbbf24;">${fastest.duration}</span>
+        </div>
+      </div>
+    ` : ''}
+  `;
+}
+
+// Render Flight Cards in Explorer with Full Score UI, Sub-scores & Actions
+function renderFlightCards(flights, bestFare, searchEnvelope = null) {
   const container = document.getElementById('flightResults');
   if (!container) return;
 
   if (!flights || !flights.length) {
     container.innerHTML = `
-      <div class="card empty-box" style="margin-top:14px; text-align:center; padding:36px 20px;">
-        <span style="font-size:32px; display:block; margin-bottom:8px;">🔍</span>
-        <h3 style="margin-bottom:6px;">We couldn't find flights matching those filters</h3>
-        <p style="font-size:13px; color:var(--text-muted);">Try selecting "Any" stops, broadening your price limit, or clearing filters.</p>
+      <div class="friendly-empty-card" style="margin-top:20px; text-align:center; padding:36px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-md);">
+        <div class="friendly-empty-icon" style="font-size:36px; margin-bottom:12px;">✈️</div>
+        <h3 class="friendly-empty-title" style="margin:0 0 8px; font-size:18px;">No Flights Match Your Selected Criteria</h3>
+        <p class="friendly-empty-desc" style="color:var(--text-muted); max-width:520px; margin:0 auto 16px;">
+          Try selecting "Any" stops, broadening your price limit, or explore one of our verified master demo routes:
+        </p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:18px;">
+          <button class="btn sm light" onclick="selectDemoRoute('HYD', 'DEL')">⚡ Hyderabad ➔ Delhi</button>
+          <button class="btn sm light" onclick="selectDemoRoute('HYD', 'BOM')">⚡ Hyderabad ➔ Mumbai</button>
+          <button class="btn sm light" onclick="selectDemoRoute('BLR', 'DEL')">⚡ Bengaluru ➔ Delhi</button>
+          <button class="btn sm light" onclick="selectDemoRoute('BOM', 'DEL')">⚡ Mumbai ➔ Delhi</button>
+          <button class="btn sm green" onclick="exploreDemoFlights()">🌐 View All 20+ Demo Flights</button>
+        </div>
+        <button class="btn primary sm" onclick="resetFlightFilters()">Reset Filters & Show All</button>
       </div>
     `;
     return;
@@ -566,101 +1332,524 @@ function renderFlightCards(flights, bestFare) {
 
   const withBag = document.getElementById('bagsToggle')?.checked || false;
 
-  container.innerHTML = flights.map(f => {
-    const finalFare = withBag ? (f.total_fare + f.bag_fee) : f.total_fare;
-    const airlineClass = `airline-${f.airline.toLowerCase().replace(/\s+/g, '-')}`;
+  // Header banner showing count and best fare
+  let metaHeaderHtml = `
+    <div class="search-provider-banner" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); padding:10px 16px; border-radius:10px; margin-bottom:14px; font-size:12px; flex-wrap:wrap; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="color:var(--text-muted);">Data Source:</span>
+        <span class="data-source-pill badge-live" style="font-weight:700; padding:3px 8px; border-radius:6px; font-size:11px; text-transform:uppercase; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);">● DEMO DATASET</span>
+        <span style="color:var(--text-muted);">Provider: <b>AirfareX Aviation Engine</b></span>
+      </div>
+      <div style="color:var(--text-muted);">
+        <b>${flights.length}</b> flight${flights.length === 1 ? '' : 's'} found · Best Fare: <b style="color:var(--brand-mint);">₹${(bestFare || 4290).toLocaleString('en-IN')}</b>
+      </div>
+    </div>
+  `;
 
-    // Customer-friendly smart badges (Issue #6)
-    let badgeText = '🏷️ BEST VALUE';
-    let badgeColor = 'blue';
+  const cardsHtml = flights.map((f, idx) => {
+    const flightNo = f.flightNumber || f.flight_no || `6E-${idx+200}`;
+    const airline = f.airline || 'IndiGo';
+    const airlineClass = `airline-${airline.toLowerCase().replace(/\s+/g, '-')}`;
+    const safeFlightId = flightNo.replace(/[^a-zA-Z0-9]/g, '_');
+    const totFare = f.totalPrice || f.total_fare || 4500;
+    const finalFare = withBag ? (totFare + (f.bag_fee || 0)) : totFare;
+    const baseFare = f.basePrice || f.base_fare || Math.round(totFare * 0.8);
+    const taxes = f.taxes || f.taxes_fees || (totFare - baseFare);
+    const depTime = f.departureTime || f.dep_time || '07:15';
+    const arrTime = f.arrivalTime || f.arr_time || '09:30';
+    const origCode = f.origin || f.origin_code || 'HYD';
+    const destCode = f.destination || f.destination_code || 'DEL';
+    const duration = f.duration || '2h 15m';
+    const stops = f.stops || 'Nonstop';
 
-    if (f.fare_score >= 93 || f.tag?.includes('Recommended') || f.flight_no === '6E-205') {
-      badgeText = '🤖 AI PICK';
-      badgeColor = 'green';
-    } else if (bestFare && f.total_fare <= bestFare) {
-      badgeText = '💰 CHEAPEST';
-      badgeColor = 'green';
-    } else if (f.stops === 'Nonstop' && (f.duration?.startsWith('2h') || f.duration?.startsWith('1h'))) {
-      badgeText = '⚡ FASTEST';
-      badgeColor = 'cyan';
-    }
+    // Scoring metrics
+    const overallScore = f.overallScore || f.fare_score || 92;
+    const scoreRating = f.scoreRating || (overallScore >= 90 ? 'Excellent' : (overallScore >= 80 ? 'Very Good' : 'Good'));
+    const ratingClass = overallScore >= 90 ? 'excellent' : (overallScore >= 80 ? 'very-good' : (overallScore >= 70 ? 'good' : 'average'));
+    const priceScore = f.priceScore || 92;
+    const relScore = f.reliabilityScore || 95;
+    const punctScore = f.punctualityScore || f.onTimePercentage || 94;
+    const comfScore = f.comfortScore || 88;
 
-    const bagSubText = withBag 
-      ? 'incl. 15kg checked bag' 
-      : 'Taxes & fees included';
-    const bagTagText = f.bag_fee === 0 
-      ? '🧳 7kg Cabin + 15kg Checked bag included' 
-      : `🧳 Checked bag: +₹${f.bag_fee}`;
+    // Badges
+    let badgeText = f.recommendation || (totFare <= (bestFare || 4500) ? 'Lowest Price' : (stops === 'Nonstop' ? 'Best Value' : 'Verified'));
+    let badgeClass = 'best-value';
+    if (badgeText.toLowerCase().includes('overall') || badgeText.toLowerCase().includes('pick')) badgeClass = 'airfarex-pick';
+    else if (badgeText.toLowerCase().includes('lowest') || badgeText.toLowerCase().includes('price') || badgeText.toLowerCase().includes('cheapest')) badgeClass = 'cheapest';
+    else if (badgeText.toLowerCase().includes('fastest') || badgeText.toLowerCase().includes('quick')) badgeClass = 'fastest';
+    else if (badgeText.toLowerCase().includes('reliable')) badgeClass = 'airfarex-pick';
+
+    const bagSubText = withBag ? 'incl. 15kg checked bag' : 'Taxes & fees included';
+    const bagTagText = f.baggage || (f.bag_fee === 0 ? '🧳 7kg Cabin + 15kg Checked bag' : `🧳 Checked bag: +₹${f.bag_fee}`);
+    const isCompared = state.selectedComparisonFlights.some(cf => (cf.flightNumber || cf.flight_no) === flightNo);
 
     return `
-      <div class="flight-card ${airlineClass}">
+      <div class="flight-card ${airlineClass}" id="flightCard_${safeFlightId}" style="margin-bottom:14px;">
         <div class="flight-row-main">
+          <!-- Airline & Flight No -->
           <div class="flight-airline">
             <div class="airline-name">
-              ${f.airline}
-              <span class="flight-no-tag">${f.flight_no}</span>
+              <b style="font-size:16px; color:var(--text-main);">${airline}</b>
+              <span class="flight-no-tag">${flightNo}</span>
             </div>
-            <div>
-              <span class="badge ${badgeColor}">${badgeText}</span>
+            <div class="smart-badge-row" style="display:flex; align-items:center; gap:6px; margin-top:6px; flex-wrap:wrap;">
+              <span class="smart-badge ${badgeClass}">${badgeText}</span>
+              <span class="score-badge-indicator ${ratingClass}" title="Calculated Composite Score">⭐ ${overallScore}/100 — ${scoreRating}</span>
             </div>
           </div>
 
+          <!-- Schedule & Track -->
           <div class="flight-schedule">
             <div class="flight-time-box">
-              <span class="flight-time">${f.dep_time}</span>
-              <span class="flight-city">${f.origin_code}</span>
+              <span class="flight-time">${depTime}</span>
+              <span class="flight-city">${origCode}</span>
             </div>
             <div class="flight-duration-track">
-              <span class="flight-duration">${f.duration}</span>
+              <span class="flight-duration">${duration}</span>
               <div class="flight-track-line"></div>
-              <span class="flight-stop-label ${f.stops !== 'Nonstop' ? 'has-stops' : ''}">${f.stops}</span>
+              <span class="flight-stop-label ${stops !== 'Nonstop' ? 'has-stops' : ''}">${stops}</span>
             </div>
             <div class="flight-time-box" style="text-align: right;">
-              <span class="flight-time">${f.arr_time}</span>
-              <span class="flight-city">${f.destination_code}</span>
+              <span class="flight-time">${arrTime}</span>
+              <span class="flight-city">${destCode}</span>
             </div>
           </div>
 
-          <div class="flight-intelligence-box">
-            <div class="score-badge-wrap">
-              <span class="small" style="font-size:11px; color:var(--text-muted); font-weight:700;">Value Score</span>
-              <span class="score-value">${f.fare_score}/100</span>
-            </div>
-            <div class="co2-pill">
-              <span>🌱 ${f.emissions_kg} kg CO₂e</span>
-            </div>
-          </div>
-
+          <!-- Pricing -->
           <div class="flight-pricing-box">
             <div class="flight-price">₹${finalFare.toLocaleString('en-IN')}</div>
             <div class="price-type-sub">${bagSubText}</div>
           </div>
 
-          <div class="flight-actions">
-            <button class="btn sm" onclick="selectFlight('${f.airline}', '${f.flight_no}', ${finalFare}, '${f.destination_code}', '${f.destination}')">Select Flight ➔</button>
-            <button class="btn sm light" onclick="quickAlert('${f.origin_code} → ${f.destination_code}', ${finalFare})">🔔 Track</button>
+          <!-- Action Buttons -->
+          <div class="flight-actions" style="display:flex; flex-direction:column; gap:6px;">
+            <button class="btn-select-flight" onclick="selectFlight('${airline}', '${flightNo}', ${finalFare}, '${destCode}', '${f.destinationCity || destCode}')">Book Now ➔</button>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-view-details" onclick="openFlightDetailsModal('${flightNo}')" title="View Full Details & 5-Bar Score Breakdown">📋 Details</button>
+              <button class="btn-why-flight" onclick="openWhyThisFlightModal('${flightNo}')" title="Explain why this flight is recommended">💡 Why?</button>
+            </div>
           </div>
         </div>
 
-        <div class="flight-tags-row">
-          <span class="flight-pill-tag">📍 Terminal ${f.terminal || 'T2'}</span>
-          <span class="flight-pill-tag">${bagTagText}</span>
-          <span class="flight-pill-tag">✓ Refundable (DGCA Rules)</span>
-          <span class="flight-pill-tag">💺 ${f.seat_pitch || '30"'} Seat Pitch</span>
-          <span class="flight-pill-tag accent clickable" onclick="checkStatusForFlight('${f.flight_no}')">Live Status →</span>
+        <!-- Requirement 3: Sub-scores strip -->
+        <div class="flight-subscores-strip">
+          <span class="subscore-item price">💸 Price: <b>${priceScore}/100</b></span>
+          <span style="color:rgba(255,255,255,0.15);">·</span>
+          <span class="subscore-item reliability">🛡️ Reliability: <b>${relScore}/100</b></span>
+          <span style="color:rgba(255,255,255,0.15);">·</span>
+          <span class="subscore-item punctuality">⏱️ Punctuality: <b>${punctScore}/100</b></span>
+          <span style="color:rgba(255,255,255,0.15);">·</span>
+          <span class="subscore-item comfort">💺 Comfort: <b>${comfScore}/100</b></span>
+          <span style="margin-left:auto; font-size:11px; color:var(--text-muted);">${f.aircraft || 'Airbus A320neo'}</span>
+        </div>
+
+        <!-- Meta Tags & Compare Toggle -->
+        <div class="flight-tags-row" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-top:8px;">
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <span class="flight-pill-tag">📍 Terminal ${f.terminal || 'T2'}</span>
+            <span class="flight-pill-tag">${bagTagText}</span>
+            <span class="flight-pill-tag">✓ Refundable (DGCA Rules)</span>
+            <span class="flight-pill-tag">💺 ${f.seat_pitch || '30"'} Seat Pitch</span>
+            <span class="flight-pill-tag accent clickable" onclick="checkStatusForFlight('${flightNo}')">Live Status →</span>
+            <button class="flight-pill-tag clickable" onclick="quickAlert('${origCode} ➔ ${destCode}', ${finalFare})" title="Track Price Alerts" style="border:none; cursor:pointer;">🔔 Track</button>
+          </div>
+
+          <!-- Compare Checkbox -->
+          <label class="flight-compare-toggle" title="Select to compare up to 2 flights side-by-side" style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:12px; font-weight:700;">
+            <input type="checkbox" onchange="toggleFlightComparisonSelect('${flightNo}', this)" ${isCompared ? 'checked' : ''}>
+            <span>⚖️ Compare</span>
+          </label>
         </div>
       </div>
     `;
   }).join('');
+
+  container.innerHTML = metaHeaderHtml + cardsHtml;
 }
 
-// Sorting handler
+// =========================================================
+// PHASE 7: FLIGHT DETAILS & SCORE BREAKDOWN MODAL HANDLER
+// =========================================================
+
+function openFlightDetailsModal(flightNo) {
+  const modal = document.getElementById('flightDetailsModal');
+  if (!modal) return;
+
+  const flight = window.AirfarexDemoData ? window.AirfarexDemoData.getFlightByNumber(flightNo) : (state.flights || []).find(f => (f.flightNumber || f.flight_no) === flightNo);
+  if (!flight) return;
+
+  const airline = flight.airline || 'IndiGo';
+  const fNo = flight.flightNumber || flight.flight_no || flightNo;
+  const origCode = flight.origin || flight.origin_code || 'HYD';
+  const destCode = flight.destination || flight.destination_code || 'DEL';
+  const origCity = flight.originCity || flight.origin_city || origCode;
+  const destCity = flight.destinationCity || flight.destination_city || destCode;
+  const depTime = flight.departureTime || flight.dep_time || '07:15';
+  const arrTime = flight.arrivalTime || flight.arr_time || '09:30';
+  const duration = flight.duration || '2h 15m';
+  const stops = flight.stops || 'Nonstop';
+  const totFare = flight.totalPrice || flight.total_fare || 4700;
+  const baseFare = flight.basePrice || flight.base_fare || Math.round(totFare * 0.82);
+  const taxes = flight.taxes || flight.taxes_fees || (totFare - baseFare);
+
+  // Scores
+  const pScore = flight.priceScore || 92;
+  const rScore = flight.reliabilityScore || 95;
+  const punctScore = flight.punctualityScore || flight.onTimePercentage || 94;
+  const cScore = flight.comfortScore || 88;
+  const overall = flight.overallScore || Math.round(pScore*0.3 + rScore*0.25 + punctScore*0.25 + cScore*0.2);
+  const rating = flight.scoreRating || (overall >= 90 ? 'Excellent' : (overall >= 80 ? 'Very Good' : 'Good'));
+  const ratingClass = overall >= 90 ? 'excellent' : (overall >= 80 ? 'very-good' : (overall >= 70 ? 'good' : 'average'));
+
+  // Header Elements
+  const titleEl = document.getElementById('fDetFlightTitle');
+  const badgeEl = document.getElementById('fDetBadge');
+  const scoreBadgeEl = document.getElementById('fDetScoreBadge');
+  const sectorEl = document.getElementById('fDetSector');
+  const aircraftEl = document.getElementById('fDetAircraft');
+  const totalFareEl = document.getElementById('fDetTotalFare');
+
+  if (titleEl) titleEl.textContent = `${airline} ${fNo}`;
+  if (badgeEl) badgeEl.textContent = flight.recommendation || 'BEST VALUE';
+  if (scoreBadgeEl) {
+    scoreBadgeEl.className = `score-badge-indicator ${ratingClass}`;
+    scoreBadgeEl.textContent = `⭐ ${overall}/100 — ${rating}`;
+  }
+  if (sectorEl) sectorEl.textContent = `${origCode} ➔ ${destCode}`;
+  if (aircraftEl) aircraftEl.textContent = `${flight.aircraft || 'Airbus A320neo'} · ${flight.cabinClass || 'Economy Standard'}`;
+  if (totalFareEl) totalFareEl.textContent = `₹${totFare.toLocaleString('en-IN')}`;
+
+  // Schedule Elements
+  document.getElementById('fDetDepTime') && (document.getElementById('fDetDepTime').textContent = depTime);
+  document.getElementById('fDetArrTime') && (document.getElementById('fDetArrTime').textContent = arrTime);
+  document.getElementById('fDetOriginCode') && (document.getElementById('fDetOriginCode').textContent = origCode);
+  document.getElementById('fDetDestCode') && (document.getElementById('fDetDestCode').textContent = destCode);
+  document.getElementById('fDetOriginCity') && (document.getElementById('fDetOriginCity').textContent = origCity);
+  document.getElementById('fDetDestCity') && (document.getElementById('fDetDestCity').textContent = destCity);
+  document.getElementById('fDetDuration') && (document.getElementById('fDetDuration').textContent = duration);
+  document.getElementById('fDetStops') && (document.getElementById('fDetStops').textContent = stops);
+  document.getElementById('fDetTerminalDep') && (document.getElementById('fDetTerminalDep').textContent = `📍 Terminal ${flight.terminal || 'T2'} · Gate ${flight.gate || '12'}`);
+  document.getElementById('fDetTerminalArr') && (document.getElementById('fDetTerminalArr').textContent = `📍 Terminal ${flight.terminal || 'T2'}`);
+
+  // Score Progress Bars
+  setScoreBar('fDetBarPrice', 'fDetBarValPrice', pScore);
+  setScoreBar('fDetBarReliability', 'fDetBarValReliability', rScore);
+  setScoreBar('fDetBarPunctuality', 'fDetBarValPunctuality', punctScore);
+  setScoreBar('fDetBarComfort', 'fDetBarValComfort', cScore);
+  setScoreBar('fDetBarOverall', 'fDetBarValOverall', overall);
+
+  const reasonEl = document.getElementById('fDetScoreReason');
+  if (reasonEl) {
+    reasonEl.textContent = flight.scoreReason || `Scored ${overall}/100 based on competitive fare (${pScore}/100), ${punctScore}% on-time rate (${punctScore}/100), high fleet reliability (${rScore}/100), and ${flight.seat_pitch || '30"'} seat pitch comfort (${cScore}/100).`;
+  }
+
+  // DGCA Taxes
+  const udfFee = Math.round(taxes * 0.55);
+  const fuelFee = Math.round(taxes * 0.32);
+  const gstFee = taxes - udfFee - fuelFee;
+  document.getElementById('fDetBaseFare') && (document.getElementById('fDetBaseFare').textContent = `₹${baseFare.toLocaleString('en-IN')}`);
+  document.getElementById('fDetUdfFee') && (document.getElementById('fDetUdfFee').textContent = `₹${udfFee.toLocaleString('en-IN')}`);
+  document.getElementById('fDetFuelFee') && (document.getElementById('fDetFuelFee').textContent = `₹${fuelFee.toLocaleString('en-IN')}`);
+  document.getElementById('fDetGstFee') && (document.getElementById('fDetGstFee').textContent = `₹${gstFee.toLocaleString('en-IN')}`);
+  document.getElementById('fDetFinalTotal') && (document.getElementById('fDetFinalTotal').textContent = `₹${totFare.toLocaleString('en-IN')}`);
+  document.getElementById('fDetBtnFare') && (document.getElementById('fDetBtnFare').textContent = totFare.toLocaleString('en-IN'));
+
+  // Baggage & Policy
+  document.getElementById('fDetBaggage') && (document.getElementById('fDetBaggage').textContent = flight.baggage || '7kg Cabin + 15kg Check-in included');
+  document.getElementById('fDetPolicy') && (document.getElementById('fDetPolicy').textContent = flight.cancellationPolicy || 'DGCA CAR Sec 3: Free cancellation within 24h of booking');
+
+  // Book Button Handler
+  const bookBtn = document.getElementById('fDetBookBtn');
+  if (bookBtn) {
+    bookBtn.onclick = () => {
+      closeModal('flightDetailsModal');
+      selectFlight(airline, fNo, totFare, destCode, destCity);
+    };
+  }
+
+  openModal('flightDetailsModal');
+}
+
+// =========================================================
+// PHASE 7: EXPLAINABLE "WHY THIS FLIGHT?" MODAL HANDLER
+// =========================================================
+
+async function openWhyThisFlightModal(flightNo) {
+  const modal = document.getElementById('whyFlightModal');
+  if (!modal) return;
+
+  const fromCity = document.getElementById('fFrom')?.value || 'HYD';
+  const toCity = document.getElementById('fTo')?.value || 'DEL';
+  const depDate = document.getElementById('departDate')?.value || null;
+
+  try {
+    const flight = window.AirfarexDemoData ? window.AirfarexDemoData.getFlightByNumber(flightNo) : null;
+    const titleEl = document.getElementById('whyModalFlightTitle');
+    const badgeEl = document.getElementById('whyModalBadge');
+    const sectorEl = document.getElementById('whyModalSector');
+    const schedEl = document.getElementById('whyModalSchedule');
+    const fareEl = document.getElementById('whyModalFare');
+    const scoreEl = document.getElementById('whyModalOverallScore');
+
+    if (flight) {
+      if (titleEl) titleEl.textContent = `${flight.airline} ${flight.flightNumber || flight.flight_no}`;
+      if (sectorEl) sectorEl.textContent = `${flight.origin} ➔ ${flight.destination}`;
+      if (schedEl) schedEl.textContent = `${flight.departureTime} – ${flight.arrivalTime} · ${flight.duration} · ${flight.stops}`;
+      if (fareEl) fareEl.textContent = `₹${(flight.totalPrice || flight.total_fare).toLocaleString('en-IN')}`;
+      if (scoreEl) scoreEl.textContent = flight.overallScore || 92;
+
+      if (badgeEl) {
+        badgeEl.textContent = flight.recommendation || 'BEST VALUE';
+        badgeEl.className = 'smart-badge airfarex-pick';
+      }
+
+      setScoreBar('scoreBarPrice', 'scoreValPrice', flight.priceScore || 92);
+      setScoreBar('scoreBarDur', 'scoreValDur', flight.punctualityScore || 94);
+      setScoreBar('scoreBarStops', 'scoreValStops', flight.reliabilityScore || 95);
+      setScoreBar('scoreBarConv', 'scoreValConv', flight.comfortScore || 88);
+      setScoreBar('scoreBarValue', 'scoreValValue', flight.overallScore || 92);
+
+      const reasonsBox = document.getElementById('whyModalReasonsList');
+      if (reasonsBox) {
+        reasonsBox.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="color:var(--brand-mint); font-weight:800;">✓</span>
+            <span>${flight.scoreReason || 'Statutory on-time flight with competitive fare.'}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="color:var(--brand-mint); font-weight:800;">✓</span>
+            <span>Baggage: ${flight.baggage || '7kg Cabin + 15kg Checked bag included'}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="color:var(--brand-mint); font-weight:800;">✓</span>
+            <span>Seat Comfort: ${flight.seat_pitch || '30"'} Legroom on ${flight.aircraft || 'modern fleet'}</span>
+          </div>
+        `;
+      }
+
+      openModal('whyFlightModal');
+    }
+  } catch (err) {
+    console.error('Failed to load flight insights:', err);
+    showToast('Could not load AI flight breakdown', false);
+  }
+}
+
+function setScoreBar(barId, valId, val) {
+  const bar = document.getElementById(barId);
+  const vEl = document.getElementById(valId);
+  if (bar) bar.style.width = `${Math.min(100, Math.max(10, val))}%`;
+  if (vEl) vEl.textContent = val;
+}
+
+// =========================================================
+// PHASE 7: SIDE-BY-SIDE FLIGHT COMPARISON CONTROLLER
+// =========================================================
+
+function toggleFlightComparisonSelect(flightNo, checkbox) {
+  const targetFlight = window.AirfarexDemoData ? window.AirfarexDemoData.getFlightByNumber(flightNo) : (state.flights || []).find(f => (f.flightNumber || f.flight_no) === flightNo);
+  if (!targetFlight) return;
+
+  const fIdentifier = targetFlight.flightNumber || targetFlight.flight_no;
+
+  if (checkbox.checked) {
+    if (state.selectedComparisonFlights.length >= 2) {
+      showToast('Comparing 2 selected flights side-by-side.', false);
+      state.selectedComparisonFlights.shift();
+    }
+    state.selectedComparisonFlights.push(targetFlight);
+  } else {
+    state.selectedComparisonFlights = state.selectedComparisonFlights.filter(f => (f.flightNumber || f.flight_no) !== fIdentifier);
+  }
+
+  updateComparisonFloatingBar();
+}
+
+function updateComparisonFloatingBar() {
+  const bar = document.getElementById('comparisonFloatingBar');
+  const countEl = document.getElementById('compFloatingCount');
+  if (!bar) return;
+
+  const count = state.selectedComparisonFlights.length;
+  if (count > 0) {
+    bar.classList.remove('hidden');
+    if (countEl) countEl.textContent = `${count} flight${count === 1 ? '' : 's'} selected for comparison`;
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function clearFlightComparisonSelection() {
+  state.selectedComparisonFlights = [];
+  document.querySelectorAll('.flight-compare-toggle input').forEach(cb => cb.checked = false);
+  updateComparisonFloatingBar();
+}
+
+async function launchSelectedFlightComparison() {
+  if (state.selectedComparisonFlights.length < 2) {
+    showToast('Please select 2 flights from the list to compare side-by-side', false);
+    return;
+  }
+
+  const flightA = state.selectedComparisonFlights[0];
+  const flightB = state.selectedComparisonFlights[1];
+
+  // Populate Comparison Modal
+  const secEl = document.getElementById('compModalSectorTitle');
+  if (secEl) secEl.textContent = `${flightA.origin || flightA.origin_code || 'HYD'} ➔ ${flightA.destination || flightA.destination_code || 'DEL'}`;
+
+  // Flight A
+  const nameA = document.getElementById('compFlightAName');
+  const fareA = document.getElementById('compFareA');
+  const durA = document.getElementById('compDurA');
+  const stopsA = document.getElementById('compStopsA');
+  const depA = document.getElementById('compDepA');
+  const arrA = document.getElementById('compArrA');
+  const scoreA = document.getElementById('compScoreA');
+  const btnA = document.getElementById('compSelectBtnA');
+
+  const fareNumA = flightA.totalPrice || flightA.total_fare || 4500;
+  const scoreNumA = flightA.overallScore || 92;
+  if (nameA) nameA.textContent = `${flightA.airline} ${flightA.flightNumber || flightA.flight_no}`;
+  if (fareA) fareA.textContent = `₹${fareNumA.toLocaleString('en-IN')}`;
+  if (durA) durA.textContent = flightA.duration;
+  if (stopsA) stopsA.textContent = flightA.stops;
+  if (depA) depA.textContent = flightA.departureTime || flightA.dep_time;
+  if (arrA) arrA.textContent = flightA.arrivalTime || flightA.arr_time;
+  if (scoreA) scoreA.textContent = `${scoreNumA}/100`;
+  if (btnA) btnA.onclick = () => { selectFlight(flightA.airline, flightA.flightNumber || flightA.flight_no, fareNumA, flightA.destination || 'DEL', flightA.destinationCity || 'Delhi'); closeModal('flightComparisonModal'); };
+
+  // Flight B
+  const nameB = document.getElementById('compFlightBName');
+  const fareB = document.getElementById('compFareB');
+  const durB = document.getElementById('compDurB');
+  const stopsB = document.getElementById('compStopsB');
+  const depB = document.getElementById('compDepB');
+  const arrB = document.getElementById('compArrB');
+  const scoreB = document.getElementById('compScoreB');
+  const btnB = document.getElementById('compSelectBtnB');
+
+  const fareNumB = flightB.totalPrice || flightB.total_fare || 4800;
+  const scoreNumB = flightB.overallScore || 88;
+  if (nameB) nameB.textContent = `${flightB.airline} ${flightB.flightNumber || flightB.flight_no}`;
+  if (fareB) fareB.textContent = `₹${fareNumB.toLocaleString('en-IN')}`;
+  if (durB) durB.textContent = flightB.duration;
+  if (stopsB) stopsB.textContent = flightB.stops;
+  if (depB) depB.textContent = flightB.departureTime || flightB.dep_time;
+  if (arrB) arrB.textContent = flightB.arrivalTime || flightB.arr_time;
+  if (scoreB) scoreB.textContent = `${scoreNumB}/100`;
+  if (btnB) btnB.onclick = () => { selectFlight(flightB.airline, flightB.flightNumber || flightB.flight_no, fareNumB, flightB.destination || 'DEL', flightB.destinationCity || 'Delhi'); closeModal('flightComparisonModal'); };
+
+  // Narrative & Verdict
+  const narrEl = document.getElementById('compModalNarrative');
+  const verdEl = document.getElementById('compModalVerdict');
+  const pointsList = document.getElementById('compModalPointsList');
+
+  const isCheaperA = fareNumA <= fareNumB;
+  const priceDiff = Math.abs(fareNumA - fareNumB);
+
+  if (narrEl) {
+    narrEl.textContent = isCheaperA 
+      ? `Flight A (${flightA.airline}) saves ₹${priceDiff.toLocaleString('en-IN')} with a composite score of ${scoreNumA}/100.` 
+      : `Flight B (${flightB.airline}) saves ₹${priceDiff.toLocaleString('en-IN')} with a composite score of ${scoreNumB}/100.`;
+  }
+  if (verdEl) {
+    verdEl.textContent = scoreNumA >= scoreNumB 
+      ? `Recommendation: Choose ${flightA.airline} for superior overall value score.` 
+      : `Recommendation: Choose ${flightB.airline} for superior overall value score.`;
+  }
+
+  if (pointsList) {
+    pointsList.innerHTML = `
+      <li><b>Price Delta:</b> ₹${priceDiff.toLocaleString('en-IN')} difference</li>
+      <li><b>Punctuality:</b> ${flightA.airline} (${flightA.punctualityScore || flightA.onTimePercentage || 94}%) vs ${flightB.airline} (${flightB.punctualityScore || flightB.onTimePercentage || 91}%)</li>
+      <li><b>Aircraft:</b> ${flightA.aircraft || 'A320neo'} vs ${flightB.aircraft || 'B737 MAX'}</li>
+      <li><b>Legroom / Comfort:</b> ${flightA.seat_pitch || '30"'} vs ${flightB.seat_pitch || '31"'}</li>
+    `;
+  }
+
+  openModal('flightComparisonModal');
+}
+
+// =========================================================
+// PHASE 7: USER SCORING PREFERENCES (PERSONALIZATION)
+// =========================================================
+
+async function loadUserPreferences() {
+  try {
+    const prefs = await window.api.getAiPreferences();
+    state.userPreferences = prefs;
+
+    const pPrio = document.getElementById('prefPriority');
+    const pTime = document.getElementById('prefTime');
+    const pAir = document.getElementById('prefAirline');
+    const pFlex = document.getElementById('prefFlexDates');
+
+    if (pPrio && prefs.priority) pPrio.value = prefs.priority;
+    if (pTime && prefs.time_preference) pTime.value = prefs.time_preference;
+    if (pAir && prefs.preferred_airline) pAir.value = prefs.preferred_airline;
+    if (pFlex && prefs.flexible_dates) pFlex.checked = prefs.flexible_dates;
+  } catch (err) {
+    console.info('Preferences loaded with guest defaults.');
+  }
+}
+
+async function handleSavePreferences(event) {
+  event.preventDefault();
+  const priority = document.getElementById('prefPriority')?.value || 'best_value';
+  const timePref = document.getElementById('prefTime')?.value || 'any';
+  const prefAir = document.getElementById('prefAirline')?.value || null;
+  const flexDates = document.getElementById('prefFlexDates')?.checked || false;
+
+  const payload = {
+    priority,
+    time_preference: timePref,
+    preferred_airline: prefAir || null,
+    max_stops: priority === 'nonstop' ? 'Nonstop' : 'Any',
+    flexible_dates: flexDates
+  };
+
+  try {
+    await window.api.saveAiPreferences(payload);
+    state.userPreferences = payload;
+    closeModal('userPreferencesModal');
+    showToast('AI travel preferences updated! Re-evaluating flight rankings...');
+    await loadFlights();
+  } catch (err) {
+    // If guest / unauthenticated, store in local state
+    state.userPreferences = payload;
+    closeModal('userPreferencesModal');
+    showToast('Preferences applied for current session.');
+    await loadFlights();
+  }
+}
+
+window.toggleFlightDetails = function(flightId) {
+  const el = document.getElementById('details_' + flightId);
+  if (el) {
+    el.classList.toggle('hidden');
+  }
+};
+
 function setSort(mode) {
   state.sortMode = mode;
-  document.querySelectorAll('.result-toolbar .btn').forEach(b => b.classList.remove('dark'));
+  document.querySelectorAll('.result-toolbar .btn').forEach(b => {
+    b.classList.remove('dark');
+    b.classList.add('gray');
+  });
   const activeBtn = document.getElementById(`sortBtn_${mode}`);
-  if (activeBtn) activeBtn.classList.add('dark');
-  loadFlights();
+  if (activeBtn) {
+    activeBtn.classList.remove('gray');
+    activeBtn.classList.add('dark');
+  }
+
+  if (state.flights && state.flights.length > 0 && window.AirfarexDemoData) {
+    state.flights = window.AirfarexDemoData.sortFlights(state.flights, mode);
+    const bestFare = Math.min(...state.flights.map(f => f.totalPrice || f.total_fare || 4500));
+    renderFlightCards(state.flights, bestFare, { data_source: 'DEMO' });
+  } else {
+    loadFlights();
+  }
 }
 
 // =========================================================
@@ -708,6 +1897,14 @@ async function runPricePrediction() {
       const minF = Math.min(...fares) * 0.95;
       const maxF = Math.max(...fares) * 1.05;
       const range = maxF - minF || 1;
+
+      // Update Expected Price Range
+      const rangeEl = document.getElementById('predExpectedRange');
+      if (rangeEl && fares.length) {
+        const minActual = Math.round(Math.min(...fares));
+        const maxActual = Math.round(Math.max(...fares));
+        rangeEl.textContent = `Expected range: ₹${minActual.toLocaleString('en-IN')} – ₹${maxActual.toLocaleString('en-IN')}`;
+      }
 
       chart.innerHTML = res.forecast_14d.map(pt => {
         const heightPct = Math.round(((pt.predicted_fare - minF) / range) * 80) + 20;
@@ -943,35 +2140,85 @@ async function loadQualityData() {
 
 // Saved & Alerts CRUD
 async function loadAlerts() {
+  const container = document.getElementById('alertsListContainer');
+  if (!container) return;
+
+  if (window.auth && !window.auth.isAuthenticated()) {
+    container.innerHTML = `
+      <div class="card empty-box" style="margin-top:14px; text-align:center; padding:44px 20px;">
+        <span style="font-size:36px; display:block; margin-bottom:10px;">🔒</span>
+        <h3 style="margin-bottom:6px; font-size:17px;">Sign In to View & Manage Saved Alerts</h3>
+        <p style="font-size:13px; color:var(--text-muted); max-width:440px; margin:0 auto 16px;">
+          Create persistent sector monitors, track historical fare fluctuations, and receive verified price drop notices.
+        </p>
+        <button class="btn primary sm" onclick="openAuthModal('login')">Sign In / Register</button>
+      </div>
+    `;
+    return;
+  }
+
   try {
     const alerts = await window.api.getAlerts();
     state.alerts = alerts;
-    const container = document.getElementById('alertsListContainer');
-    if (!container) return;
 
     if (!alerts.length) {
-      container.innerHTML = '<div class="empty-box">No price alerts active. Search flights and click "Track" or create one above!</div>';
+      container.innerHTML = `
+        <div class="card empty-box" style="margin-top:14px; text-align:center; padding:44px 20px;">
+          <span style="font-size:36px; display:block; margin-bottom:10px;">🔔</span>
+          <h3 style="margin-bottom:6px; font-size:17px;">You haven't saved any flights yet</h3>
+          <p style="font-size:13px; color:var(--text-muted); max-width:440px; margin:0 auto 16px;">
+            When you search for flights, tap the <b>Track</b> icon to follow fare changes and receive real-time price drop alerts.
+          </p>
+          <button class="btn sm" onclick="showTab('home')">Search Flights Now</button>
+        </div>
+      `;
       return;
     }
 
-    container.innerHTML = alerts.map(a => `
-      <div class="route-row">
-        <div>
-          <b>${a.route}</b>
-          <div class="metric-sub">Current: ${a.current_fare} · Trigger: ${a.target_condition}</div>
+    container.innerHTML = alerts.map(a => {
+      const parts = a.route.split(/→|➔/).map(s => s.trim());
+      const fromCode = parts[0] || 'HYD';
+      const toCode = parts[1] || 'DEL';
+      return `
+        <div class="saved-route-card">
+          <div class="saved-route-info">
+            <div class="saved-route-title">✈️ ${a.route}</div>
+            <div class="saved-route-meta">Condition: ${a.target_condition} · Active 24x7 Fare Monitor</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div style="text-align:right;">
+              <div style="font-size:10.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.3px;">Current Fare</div>
+              <div style="font-size:18px; font-weight:800; color:var(--text-main); font-family:'JetBrains Mono', monospace;">${a.current_fare}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button class="btn sm" onclick="searchSavedRoute('${fromCode}', '${toCode}')">View Flights</button>
+              <button class="btn sm light" onclick="deleteAlert(${a.id})" title="Remove Alert">✕</button>
+            </div>
+          </div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span class="badge green">Tracking</span>
-          <button class="btn sm gray" onclick="deleteAlert(${a.id})">✕</button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch (err) {
     console.error('Failed to load alerts:', err);
   }
 }
 
+function searchSavedRoute(fromCode, toCode) {
+  const fromCity = document.getElementById('fromCity');
+  const toCity = document.getElementById('toCity');
+  if (fromCity) fromCity.value = fromCode;
+  if (toCity) toCity.value = toCode;
+  showTab('home');
+  triggerSearch();
+}
+window.searchSavedRoute = searchSavedRoute;
+
 async function quickAlert(route, fare) {
+  if (window.auth && !window.auth.isAuthenticated()) {
+    showToast('Please sign in to save price alerts', false);
+    openAuthModal('login');
+    return;
+  }
   try {
     await window.api.createAlert(route, `₹${fare.toLocaleString('en-IN')}`, 'Notify on 8% fare drop');
     showToast(`Price alert activated for ${route}!`);
@@ -982,6 +2229,12 @@ async function quickAlert(route, fare) {
 }
 
 async function handleCreateAlertForm() {
+  if (window.auth && !window.auth.isAuthenticated()) {
+    closeModal('createAlertModal');
+    showToast('Please sign in to create alerts', false);
+    openAuthModal('login');
+    return;
+  }
   const route = document.getElementById('alertRouteInput').value;
   const target = document.getElementById('alertTargetInput').value;
   const fare = document.getElementById('alertFareInput').value || '₹5,500';
@@ -1073,30 +2326,42 @@ function selectFlight(airline, flightNo, price, destCode = 'DEL', destName = 'De
   const fromCode = extractAirportCode(fromVal);
   const targetDestCode = destCode || extractAirportCode(toVal);
 
-  // Look up flight object in current state if available
-  const existing = state.flights?.find(f => f.flight_no === flightNo);
+  // Look up flight object in current state or demo dataset
+  const existing = state.flights?.find(f => (f.flightNumber || f.flight_no) === flightNo) 
+    || (window.AirfarexDemoData ? window.AirfarexDemoData.getFlightByNumber(flightNo) : null);
+
+  const cleanAirline = airline || existing?.airline || 'IndiGo';
+  const cleanFlightNo = flightNo || existing?.flightNumber || existing?.flight_no || '6E 203';
+  const cleanOrig = existing?.origin || existing?.origin_code || fromCode || 'HYD';
+  const cleanDest = existing?.destination || existing?.destination_code || targetDestCode || 'DEL';
+  const cleanOrigCity = existing?.originCity || existing?.origin_city || (fromVal.includes('(') ? fromVal.split('(')[0].trim() : fromVal) || 'Hyderabad';
+  const cleanDestCity = existing?.destinationCity || existing?.destination_city || (toVal.includes('(') ? toVal.split('(')[0].trim() : toVal) || 'Delhi';
+  const cleanFare = price || existing?.totalPrice || existing?.total_fare || 5240;
+  const cleanBase = existing?.basePrice || existing?.base_fare || Math.round(cleanFare * 0.8);
+  const cleanTaxes = existing?.taxes || existing?.taxes_fees || (cleanFare - cleanBase);
 
   const bookingData = {
-    airline: airline || existing?.airline || 'IndiGo',
-    flight_no: flightNo || existing?.flight_no || '6E-205',
-    origin_code: existing?.origin_code || fromCode || 'HYD',
-    origin_city: existing?.origin_city || (fromVal.includes('(') ? fromVal.split('(')[0].trim() : fromVal) || 'Hyderabad',
-    destination_code: existing?.destination_code || targetDestCode || 'DEL',
-    destination_city: existing?.destination_city || (toVal.includes('(') ? toVal.split('(')[0].trim() : toVal) || 'Delhi',
-    total_fare: price || existing?.total_fare || 5420,
-    base_fare: existing?.base_fare || Math.round((price || 5420) * 0.76),
-    dep_time: existing?.dep_time || '07:15',
-    arr_time: existing?.arr_time || '09:30',
+    airline: cleanAirline,
+    flight_no: cleanFlightNo,
+    origin_code: cleanOrig,
+    origin_city: cleanOrigCity,
+    destination_code: cleanDest,
+    destination_city: cleanDestCity,
+    total_fare: cleanFare,
+    base_fare: cleanBase,
+    taxes: cleanTaxes,
+    dep_time: existing?.departureTime || existing?.dep_time || '07:15',
+    arr_time: existing?.arrivalTime || existing?.arr_time || '09:30',
     duration: existing?.duration || '2h 15m',
     stops: existing?.stops || 'Nonstop',
     aircraft: existing?.aircraft || 'Airbus A320neo',
-    cabin: existing?.cabin || 'Economy',
+    cabin: existing?.cabinClass || existing?.cabin || 'Economy',
     terminal: existing?.terminal || 'T2',
     gate: existing?.gate || 'G12',
     seat_pitch: existing?.seat_pitch || '30"',
     baggage: existing?.baggage || '15kg Check-in + 7kg Cabin',
     emissions_kg: existing?.emissions_kg || 135,
-    fare_score: existing?.fare_score || 94,
+    fare_score: existing?.overallScore || existing?.fare_score || 94,
     travel_date: document.getElementById('flyDate')?.value || document.getElementById('departDate')?.value || new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 10)
   };
 
@@ -1291,7 +2556,31 @@ async function handleSendAiMessage(customText = null) {
 
   try {
     const lang = window.i18n?.currentLang || 'en';
-    const res = await window.api.chatWithAssistant(text, lang, { currentTab: state.currentTab });
+    
+    // Build rich context for the Travel Copilot
+    const searchContext = {
+      currentTab: state.currentTab,
+      origin: document.getElementById('fFrom')?.value || document.getElementById('fromCity')?.value || 'DEL',
+      destination: document.getElementById('fTo')?.value || document.getElementById('toCity')?.value || 'BOM',
+      date: document.getElementById('departDate')?.value || null
+    };
+    const availableFlights = (state.flights || []).slice(0, 8);
+    const selectedFlight = state.selectedFlight;
+
+    let res;
+    try {
+      res = await window.api.chatWithCopilot(
+        text,
+        searchContext,
+        availableFlights,
+        selectedFlight,
+        state.userPreferences,
+        lang
+      );
+    } catch (copilotErr) {
+      // Graceful legacy fallback
+      res = await window.api.chatWithAssistant(text, lang, { currentTab: state.currentTab });
+    }
     
     // Remove typing indicator
     const curTyping = document.getElementById('aiTypingIndicator');
@@ -1325,8 +2614,9 @@ async function handleSendAiMessage(customText = null) {
       assistantMsgEl.appendChild(traceBox);
     }
 
-    // 2. Format markdown response content
-    let formattedReply = res.reply
+    // 2. Format markdown response content (handles both answer and reply)
+    const rawText = res.answer || res.reply || "I am ready to help you plan your journey.";
+    let formattedReply = rawText
       .replace(/^### (.*$)/gim, '<h3 style="margin:4px 0 8px; color:var(--brand-cyan); font-size:15px;">$1</h3>')
       .replace(/^## (.*$)/gim, '<h3 style="margin:4px 0 8px; color:var(--brand-cyan); font-size:15px;">$1</h3>')
       .replace(/^#### (.*$)/gim, '<h4 style="margin:6px 0 4px; color:var(--brand-blue); font-size:13px;">$1</h4>')
@@ -1338,6 +2628,15 @@ async function handleSendAiMessage(customText = null) {
     const replyDiv = document.createElement('div');
     replyDiv.innerHTML = formattedReply;
     assistantMsgEl.appendChild(replyDiv);
+
+    // Attribution footer in bubble
+    const attrDiv = document.createElement('div');
+    attrDiv.style.cssText = 'margin-top:8px; font-size:10px; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.06); padding-top:4px; display:flex; justify-content:space-between;';
+    attrDiv.innerHTML = `
+      <span>⚡ Powered by AirfareX Intelligence</span>
+      <span>Provider: ${res.provider || 'RULE_BASED'}</span>
+    `;
+    assistantMsgEl.appendChild(attrDiv);
 
     // 3. Render interactive action buttons
     if (res.action) {
@@ -2236,5 +3535,576 @@ async function checkSupabaseConnectionLive() {
 }
 
 window.checkSupabaseConnectionLive = checkSupabaseConnectionLive;
+
+// =========================================================
+// CUSTOMER TRIPS & BOOKINGS (MY TRIPS)
+// =========================================================
+state.myTrips = [];
+state.tripFilter = 'All';
+
+async function loadMyTrips() {
+  const container = document.getElementById('myTripsListContainer');
+  if (!container) return;
+
+  if (!window.auth || !window.auth.isAuthenticated()) {
+    container.innerHTML = `
+      <div class="card empty-box" style="margin-top:14px; text-align:center; padding:50px 20px;">
+        <span style="font-size:42px; display:block; margin-bottom:12px;">🔒</span>
+        <h3 style="margin-bottom:6px; font-size:18px;">Sign In to View Your Bookings</h3>
+        <p style="font-size:13px; color:var(--text-muted); max-width:440px; margin:0 auto 18px;">
+          Access your confirmed e-tickets, boarding passes, flight vouchers, and real-time trip status.
+        </p>
+        <button class="btn primary" onclick="openAuthModal('login')">Sign In / Create Account</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="text-align:center; padding:40px; color:var(--text-muted);">
+      <div class="loading-spinner" style="margin:0 auto 10px;"></div>
+      <span>Loading your bookings...</span>
+    </div>
+  `;
+
+  try {
+    const trips = await window.api.getMyTrips();
+    state.myTrips = trips || [];
+    renderTripsList();
+  } catch (err) {
+    container.innerHTML = `
+      <div class="card" style="padding:24px; text-align:center; color:var(--brand-rose);">
+        <p>Could not load bookings: ${err.message || 'Network error'}</p>
+        <button class="btn sm light" onclick="loadMyTrips()">Retry</button>
+      </div>
+    `;
+  }
+}
+
+function renderTripsList() {
+  const container = document.getElementById('myTripsListContainer');
+  if (!container) return;
+
+  const filtered = state.myTrips.filter(t => {
+    if (state.tripFilter === 'All') return true;
+    return t.trip_category === state.tripFilter;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = `
+      <div class="card empty-box" style="margin-top:14px; text-align:center; padding:50px 20px;">
+        <span style="font-size:42px; display:block; margin-bottom:12px;">✈️</span>
+        <h3 style="margin-bottom:6px; font-size:18px;">No ${state.tripFilter !== 'All' ? state.tripFilter.toLowerCase() : ''} bookings found</h3>
+        <p style="font-size:13px; color:var(--text-muted); max-width:440px; margin:0 auto 18px;">
+          When you book flight tickets or holiday packages on AirfareX, your confirmed itineraries and e-tickets will be stored securely here.
+        </p>
+        <button class="btn primary sm" onclick="showTab('explorer')">Explore Flights & Deals</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(t => {
+    const statusBadgeClass = t.payment_status === 'PAYMENT_VERIFIED' || t.booking_status === 'BOOKING_CONFIRMED' || t.booking_status === 'CONFIRMED'
+      ? 'green'
+      : (t.booking_status === 'CANCELLED' || t.payment_status === 'FAILED' ? 'rose' : 'amber');
+
+    const catBadge = t.trip_category === 'Upcoming' ? 'blue' : (t.trip_category === 'Completed' ? 'gray' : 'rose');
+
+    const passengerNames = t.passengers && t.passengers.length
+      ? t.passengers.map(p => p.full_name).join(', ')
+      : t.traveler_name;
+
+    const bRef = t.booking_reference || t.booking_id.slice(-8).toUpperCase();
+    const isCancellable = ['PENDING_PAYMENT', 'CONFIRMED', 'BOOKING_CONFIRMED', 'DRAFT'].includes(t.booking_status);
+
+    return `
+      <div class="card" style="margin-bottom:16px; padding:20px; border-radius:var(--radius-lg); border:1px solid var(--border-color); background:var(--bg-surface); box-shadow:var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid var(--border-color); padding-bottom:12px;">
+          <div>
+            <span class="badge ${catBadge}" style="font-weight:700; margin-right:8px;">${t.trip_category.toUpperCase()}</span>
+            <span style="font-family:'JetBrains Mono', monospace; font-size:14px; font-weight:800; color:var(--brand-cyan);">Ref: ${bRef}</span>
+            <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">(${t.booking_id})</span>
+            ${t.pnr ? `<span style="margin-left:10px; font-size:12.5px; color:var(--text-muted);">PNR: <b style="color:var(--text-main);">${t.pnr}</b></span>` : ''}
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="data-source-pill" style="font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700; background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3);">[${t.data_source || 'DEVELOPMENT'}]</span>
+            <span class="badge ${statusBadgeClass}" style="font-weight:700;">${t.booking_status}</span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:14px;">
+          <div>
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.3px;">Sector / Flight</div>
+            <div style="font-size:16px; font-weight:800; color:var(--text-main); margin-top:2px;">
+              ${t.sector || 'Domestic Flight'}
+            </div>
+            <div style="font-size:12.5px; color:var(--text-muted);">
+              ${t.airline ? `${t.airline} · ` : ''}<b>${t.flight_no || 'Scheduled'}</b>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.3px;">Travel Date</div>
+            <div style="font-size:15px; font-weight:700; color:var(--text-main); margin-top:2px;">
+              📅 ${t.travel_date}
+            </div>
+            ${t.seat_number ? `<div style="font-size:12px; color:var(--text-muted);">Seat: <b style="color:var(--brand-cyan);">${t.seat_number}</b></div>` : ''}
+          </div>
+
+          <div>
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.3px;">Travelers (${t.pax_count})</div>
+            <div style="font-size:13.5px; font-weight:600; color:var(--text-main); margin-top:2px;">
+              👤 ${passengerNames}
+            </div>
+          </div>
+
+          <div style="text-align:right;">
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.3px;">Total Amount</div>
+            <div style="font-size:18px; font-weight:800; color:var(--text-main); font-family:'JetBrains Mono', monospace; margin-top:2px;">
+              ₹${t.amount.toLocaleString('en-IN')}
+            </div>
+            <div style="font-size:11px; color:var(--text-muted);">${t.payment_status}</div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--border-color); padding-top:12px; flex-wrap:wrap; gap:8px;">
+          <div style="font-size:11.5px; color:var(--text-muted);">
+            Booked on ${t.created_at ? t.created_at.split('T')[0] : 'Recent'} · <span style="color:#fbbf24;">${t.development_notice || 'Development booking'}</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn sm light" onclick="viewTripDetailsModal('${t.booking_id}')">View Details</button>
+            ${isCancellable ? `<button class="btn sm light" onclick="cancelTripBookingPrompt('${t.booking_id}')" style="color:var(--brand-rose); border-color:rgba(244,63,94,0.3);">Cancel Booking</button>` : ''}
+            ${t.pnr ? `<button class="btn sm light" onclick="trackRefundDirect('${t.pnr}')">Refund Status</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterTrips(category, btn) {
+  state.tripFilter = category;
+  document.querySelectorAll('#trips .tab-btn').forEach(b => {
+    b.style.background = 'var(--bg-surface)';
+    b.style.color = 'var(--text-main)';
+  });
+  if (btn) {
+    btn.style.background = 'var(--brand-navy, #0f2447)';
+    btn.style.color = '#fff';
+  }
+  renderTripsList();
+}
+
+function trackRefundDirect(pnr) {
+  showTab('refunds');
+  trackRefundStatus(pnr);
+}
+
+async function viewTripDetailsModal(bookingId) {
+  try {
+    showToast('Fetching booking details...');
+    const b = await window.api.getBooking(bookingId);
+    if (!b) return;
+
+    const modalId = 'tripDetailsModal';
+    let modal = document.getElementById(modalId);
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = modalId;
+      modal.className = 'modal-backdrop';
+      document.body.appendChild(modal);
+    }
+
+    const paxList = b.passengers && b.passengers.length
+      ? b.passengers.map((p, idx) => `
+          <div style="padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:6px; margin-bottom:6px; font-size:12px; display:flex; justify-content:space-between;">
+            <div><b>${idx+1}. ${p.title || 'Mr'}. ${p.first_name || ''} ${p.last_name || p.full_name || ''}</b> (${p.passenger_type || 'ADULT'})</div>
+            <div>${p.seat_number ? `Seat: <b style="color:var(--brand-cyan);">${p.seat_number}</b>` : ''} · ${p.gender || 'Male'}</div>
+          </div>
+        `).join('')
+      : `<div style="font-size:12px; color:var(--text-muted);">${b.contact?.name || 'Valued Passenger'}</div>`;
+
+    const pr = b.pricing || {};
+
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width:560px; width:90%; max-height:90vh; overflow-y:auto; padding:24px; border-radius:var(--radius-lg); background:var(--bg-card); border:1px solid var(--border-color);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px;">
+          <div>
+            <h3 style="margin:0; font-size:18px; color:var(--text-main);">Booking Reference: <span style="color:var(--brand-cyan); font-family:'JetBrains Mono',monospace;">${b.booking_reference || b.booking_id}</span></h3>
+            <div style="font-size:11px; color:var(--text-muted);">ID: ${b.booking_id}</div>
+          </div>
+          <button class="btn sm light" onclick="document.getElementById('${modalId}').classList.remove('open')" style="font-size:16px; padding:2px 8px;">✕</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:12.5px; margin-bottom:16px;">
+          <div>
+            <span style="color:var(--text-muted);">Status:</span> <b class="badge ${b.booking_status === 'CONFIRMED' || b.booking_status === 'BOOKING_CONFIRMED' ? 'green' : 'amber'}">${b.booking_status}</b>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);">Payment:</span> <b>${b.payment_status}</b>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);">Sector:</span> <b>${b.sector || 'Domestic Route'}</b>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);">Travel Date:</span> <b>${b.travel_date}</b>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);">Airline:</span> <b>${b.airline || 'IndiGo'} (${b.flight_no || '6E-205'})</b>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);">PNR:</span> <b style="color:var(--brand-cyan);">${b.pnr || 'Pending allocation'}</b>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <h4 style="font-size:13px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Itemized Passengers (${b.passenger_count || 1})</h4>
+          ${paxList}
+        </div>
+
+        <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px; font-size:12px;">
+          <h4 style="font-size:12px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Authoritative Fare Breakdown</h4>
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Base Fare:</span> <span>₹${(pr.base_price || 0).toLocaleString('en-IN')}</span></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span>Taxes & Fees (UDF, ASF, 5% GST):</span> <span>₹${(pr.taxes_and_fees || 0).toLocaleString('en-IN')}</span></div>
+          ${pr.discount ? `<div style="display:flex; justify-content:space-between; margin-bottom:4px; color:var(--brand-mint);"><span>Discount Applied:</span> <span>-₹${pr.discount.toLocaleString('en-IN')}</span></div>` : ''}
+          <div style="display:flex; justify-content:space-between; font-weight:800; font-size:14px; border-top:1px dashed var(--border-color); padding-top:6px; margin-top:6px;"><span>Total Paid:</span> <span style="color:var(--brand-cyan);">₹${(pr.final_payable_amount || b.amount || 0).toLocaleString('en-IN')}</span></div>
+        </div>
+
+        <div style="padding:10px 12px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; font-size:11px; color:#fbbf24; text-align:center; margin-bottom:16px;">
+          ℹ️ ${b.development_notice || 'Development booking — airline ticket issuance is not connected in this environment.'}
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn sm light" onclick="document.getElementById('${modalId}').classList.remove('open')">Close</button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('open');
+  } catch (err) {
+    showToast(`Could not load booking details: ${err.message || err}`, false);
+  }
+}
+
+async function cancelTripBookingPrompt(bookingId) {
+  if (!confirm(`Are you sure you want to cancel booking ${bookingId}? DGCA statutory refund rules will be applied.`)) {
+    return;
+  }
+
+  try {
+    showToast('Processing booking cancellation with DGCA refund engine...');
+    const res = await window.api.cancelBooking(bookingId);
+    showToast(`✓ Booking cancelled. Refund of ₹${res.refund_amount.toLocaleString('en-IN')} initiated (ARN: ${res.refund_arn || 'N/A'}).`);
+    await loadMyTrips();
+  } catch (err) {
+    showToast(`Cancellation failed: ${err.message || (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail))}`, false);
+  }
+}
+
+window.loadMyTrips = loadMyTrips;
+window.filterTrips = filterTrips;
+window.trackRefundDirect = trackRefundDirect;
+window.viewTripDetailsModal = viewTripDetailsModal;
+window.cancelTripBookingPrompt = cancelTripBookingPrompt;
+
+// =========================================================
+// AUTH MODAL & FORM CONTROLLERS
+// =========================================================
+function openAuthModal(tab = 'login') {
+  const modal = document.getElementById('authModal');
+  if (modal) {
+    modal.classList.add('open');
+    switchAuthTab(tab);
+    clearAuthAlert();
+  }
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById('authModal');
+  if (modal) modal.classList.remove('open');
+  clearAuthAlert();
+}
+
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+  const forgotForm = document.getElementById('forgotForm');
+  const btnLogin = document.getElementById('authTabBtnLogin');
+  const btnSignup = document.getElementById('authTabBtnSignup');
+  const heading = document.getElementById('authModalHeading');
+  const subheading = document.getElementById('authModalSubheading');
+  const switcher = document.getElementById('authTabSwitcher');
+
+  clearAuthAlert();
+
+  if (tab === 'login') {
+    if (loginForm) loginForm.style.display = 'block';
+    if (signupForm) signupForm.style.display = 'none';
+    if (forgotForm) forgotForm.style.display = 'none';
+    if (switcher) switcher.style.display = 'flex';
+    if (btnLogin) {
+      btnLogin.style.background = 'var(--bg-surface)';
+      btnLogin.style.color = 'var(--text-main)';
+    }
+    if (btnSignup) {
+      btnSignup.style.background = 'transparent';
+      btnSignup.style.color = 'var(--text-muted)';
+    }
+    if (heading) heading.textContent = 'Welcome to AirfareX';
+    if (subheading) subheading.textContent = 'Sign in to manage your bookings, alerts and saved routes.';
+  } else if (tab === 'signup') {
+    if (loginForm) loginForm.style.display = 'none';
+    if (signupForm) signupForm.style.display = 'block';
+    if (forgotForm) forgotForm.style.display = 'none';
+    if (switcher) switcher.style.display = 'flex';
+    if (btnSignup) {
+      btnSignup.style.background = 'var(--bg-surface)';
+      btnSignup.style.color = 'var(--text-main)';
+    }
+    if (btnLogin) {
+      btnLogin.style.background = 'transparent';
+      btnLogin.style.color = 'var(--text-muted)';
+    }
+    if (heading) heading.textContent = 'Create Traveler Account';
+    if (subheading) subheading.textContent = 'Join AirfareX to save favorite routes, track prices, and manage trips.';
+  } else if (tab === 'forgot') {
+    if (loginForm) loginForm.style.display = 'none';
+    if (signupForm) signupForm.style.display = 'none';
+    if (forgotForm) forgotForm.style.display = 'block';
+    if (switcher) switcher.style.display = 'none';
+    if (heading) heading.textContent = 'Reset Your Password';
+    if (subheading) subheading.textContent = 'We will send a password reset link to your registered email.';
+  }
+}
+
+function showAuthAlert(msg, isSuccess = false) {
+  const box = document.getElementById('authAlertBox');
+  if (box) {
+    box.style.display = 'block';
+    box.style.background = isSuccess ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+    box.style.border = isSuccess ? '1px solid #10b981' : '1px solid #ef4444';
+    box.style.color = isSuccess ? '#059669' : '#dc2626';
+    box.textContent = msg;
+  }
+}
+
+function clearAuthAlert() {
+  const box = document.getElementById('authAlertBox');
+  if (box) box.style.display = 'none';
+}
+
+async function handleLoginSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail')?.value;
+  const pass = document.getElementById('loginPassword')?.value;
+  const btn = document.getElementById('loginSubmitBtn');
+
+  if (!email || !pass) {
+    showAuthAlert('Please fill in both email and password.');
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+  }
+
+  try {
+    await window.auth.signIn(email, pass);
+    closeAuthModal();
+    showToast(`Welcome back, ${window.auth.getUserDisplayName()}!`);
+    if (state.currentTab === 'trips') loadMyTrips();
+    if (state.currentTab === 'saved') loadAlerts();
+  } catch (err) {
+    showAuthAlert(err.message || 'Login failed. Please verify credentials.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  }
+}
+
+async function handleSignupSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById('signupFullName')?.value;
+  const email = document.getElementById('signupEmail')?.value;
+  const phone = document.getElementById('signupPhone')?.value;
+  const pass = document.getElementById('signupPassword')?.value;
+  const confirm = document.getElementById('signupConfirmPassword')?.value;
+  const btn = document.getElementById('signupSubmitBtn');
+
+  if (pass !== confirm) {
+    showAuthAlert('Passwords do not match. Please re-enter.');
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
+  }
+
+  try {
+    const res = await window.auth.signUp(name, email, pass, confirm, phone);
+    if (res.session) {
+      closeAuthModal();
+      showToast(`Account created! Welcome, ${name}!`);
+      if (state.currentTab === 'trips') loadMyTrips();
+    } else {
+      showAuthAlert(res.message || 'Account created! Please check your email to verify your address.', true);
+    }
+  } catch (err) {
+    showAuthAlert(err.message || 'Registration failed.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  }
+}
+
+async function handleForgotSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('forgotEmail')?.value;
+  const btn = document.getElementById('forgotSubmitBtn');
+
+  if (!email) {
+    showAuthAlert('Please enter your registered email address.');
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Sending link...';
+  }
+
+  try {
+    const res = await window.auth.resetPassword(email);
+    showAuthAlert(res.message || 'Password reset link sent! Check your inbox.', true);
+  } catch (err) {
+    showAuthAlert(err.message || 'Could not send reset link.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Send Reset Link';
+    }
+  }
+}
+
+window.openAuthModal = openAuthModal;
+window.closeAuthModal = closeAuthModal;
+window.switchAuthTab = switchAuthTab;
+window.handleLoginSubmit = handleLoginSubmit;
+window.handleSignupSubmit = handleSignupSubmit;
+window.handleForgotSubmit = handleForgotSubmit;
+
+// Register auth state listener to refresh tabs upon login/logout
+if (window.auth) {
+  window.auth.onAuthStateChange((user) => {
+    if (state.currentTab === 'trips') loadMyTrips();
+    if (state.currentTab === 'saved') loadAlerts();
+  });
+}
+
+// Master Airport Datalist Autocomplete Initializer
+async function initAirportDatalists() {
+  try {
+    if (window.api && typeof window.api.listAirports === 'function') {
+      const airports = await window.api.listAirports();
+      if (airports && airports.length) {
+        const originList = document.getElementById('originAirports');
+        const destList = document.getElementById('destAirports');
+        const optionsHtml = airports.map(a => `<option value="${a.city} (${a.iata_code})">${a.name}</option>`).join('');
+        if (originList) originList.innerHTML = optionsHtml;
+        if (destList) destList.innerHTML = optionsHtml;
+      }
+    }
+  } catch (err) {
+    console.debug('[Airports] Datalist fallback active');
+  }
+}
+
+// URL Query State Synchronization & Navigation Restoration
+function initUrlState() {
+  if (typeof window === 'undefined' || !window.location) return;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    const from = params.get('from');
+    const to = params.get('to');
+    const date = params.get('date');
+
+    if (from) {
+      const fFrom = document.getElementById('fFrom');
+      const fromCity = document.getElementById('fromCity');
+      if (fFrom) fFrom.value = from;
+      if (fromCity) fromCity.value = `${from} (${from})`;
+    }
+    if (to) {
+      const fTo = document.getElementById('fTo');
+      const toCity = document.getElementById('toCity');
+      if (fTo) fTo.value = to;
+      if (toCity) toCity.value = `${to} (${to})`;
+    }
+    if (date) {
+      const depDate = document.getElementById('departDate');
+      if (depDate) depDate.value = date;
+    }
+
+    if (tab) {
+      const tabLink = document.querySelector(`.main-nav a[data-tab="${tab}"]`);
+      showTab(tab, tabLink, false);
+    }
+  } catch (e) {
+    console.debug('URL state initialization skipped');
+  }
+}
+
+// Popstate listener for browser Back/Forward navigation
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.tab) {
+      showTab(e.state.tab, null, false);
+    } else {
+      initUrlState();
+    }
+  });
+}
+
+// Initialize on DOM Ready
+function onAppReady() {
+  initAirportDatalists();
+  initUrlState();
+  
+  // Phase 9: Restore Homepage Featured Discovery (Safe DEL -> BOM demo)
+  if (!state.currentTab || state.currentTab === 'home') {
+    loadHomepageFeaturedFlights('DEL', 'BOM');
+  }
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onAppReady);
+  } else {
+    onAppReady();
+  }
+}
+
+// Global window bindings for Phase 8 & 9 UX
+window.showTab = showTab;
+window.triggerSearch = triggerSearch;
+window.triggerHomeOrExplorerSearch = triggerHomeOrExplorerSearch;
+window.loadHomepageFeaturedFlights = loadHomepageFeaturedFlights;
+window.sendPromptToAi = sendPromptToAi;
+window.quickAddToComparison = quickAddToComparison;
+window.swapOriginDest = swapOriginDest;
+window.resetFlightFilters = resetFlightFilters;
+window.executeNlSearch = executeNlSearch;
+window.setNlQuery = setNlQuery;
+window.toggleAiAssistant = toggleAiAssistant;
+window.toggleAiCopilotDrawer = toggleAiAssistant;
+
+
 
 

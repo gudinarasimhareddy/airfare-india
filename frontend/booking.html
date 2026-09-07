@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="aurora">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -146,42 +146,55 @@
             <span class="badge blue">Adult (12+ yrs)</span>
           </div>
 
-          <div class="form-grid-3">
-            <div class="field-group">
-              <label>Title *</label>
-              <select id="paxTitle">
-                <option value="Mr">Mr.</option>
-                <option value="Ms">Ms.</option>
-                <option value="Mrs">Mrs.</option>
-                <option value="Dr">Dr.</option>
-              </select>
+          <div id="primaryPassengerBox">
+            <div style="font-size:13px; font-weight:700; color:var(--brand-cyan); margin-bottom:10px;">Passenger 1 (Primary Contact)</div>
+            <div class="form-grid-3">
+              <div class="field-group">
+                <label>Title *</label>
+                <select id="paxTitle">
+                  <option value="Mr">Mr.</option>
+                  <option value="Ms">Ms.</option>
+                  <option value="Mrs">Mrs.</option>
+                  <option value="Dr">Dr.</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label>First & Middle Name *</label>
+                <input type="text" id="paxFirstName" placeholder="e.g. Rajesh" value="Rajesh" required>
+              </div>
+              <div class="field-group">
+                <label>Last Name *</label>
+                <input type="text" id="paxLastName" placeholder="e.g. Sharma" value="Sharma" required>
+              </div>
             </div>
-            <div class="field-group">
-              <label>First & Middle Name *</label>
-              <input type="text" id="paxFirstName" placeholder="e.g. Rajesh" value="Rajesh" required>
-            </div>
-            <div class="field-group">
-              <label>Last Name *</label>
-              <input type="text" id="paxLastName" placeholder="e.g. Sharma" value="Sharma" required>
-            </div>
-          </div>
 
-          <div class="form-grid-2">
-            <div class="field-group">
-              <label>Age *</label>
-              <input type="number" id="paxAge" min="12" max="110" value="29" required>
-            </div>
-            <div class="field-group">
-              <label>Gender *</label>
-              <div class="radio-pills-row">
-                <div class="radio-pill-btn active" data-gender="Male" onclick="selectGender(this)">Male</div>
-                <div class="radio-pill-btn" data-gender="Female" onclick="selectGender(this)">Female</div>
-                <div class="radio-pill-btn" data-gender="Other" onclick="selectGender(this)">Other</div>
+            <div class="form-grid-2">
+              <div class="field-group">
+                <label>Age *</label>
+                <input type="number" id="paxAge" min="12" max="110" value="29" required>
+              </div>
+              <div class="field-group">
+                <label>Gender *</label>
+                <div class="radio-pills-row">
+                  <div class="radio-pill-btn active" data-gender="Male" onclick="selectGender(this)">Male</div>
+                  <div class="radio-pill-btn" data-gender="Female" onclick="selectGender(this)">Female</div>
+                  <div class="radio-pill-btn" data-gender="Other" onclick="selectGender(this)">Other</div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="form-grid-2">
+          <!-- Dynamic Additional Passengers Container (Phase 5 Multi-passenger) -->
+          <div id="additionalPassengersContainer" style="display:flex; flex-direction:column; gap:16px; margin-top:12px;"></div>
+
+          <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+            <button type="button" class="btn sm light" id="btnAddPassenger" onclick="addPassengerFormRow()" style="display:inline-flex; align-items:center; gap:6px;">
+              <span>+</span> <span>Add Another Passenger</span>
+            </button>
+            <span id="paxCountBadge" class="badge blue" style="font-size:11px;">1 Passenger</span>
+          </div>
+
+          <div class="form-grid-2" style="margin-top:16px; border-top:1px dashed var(--border-color); padding-top:14px;">
             <div class="field-group">
               <label>Mobile Number (For WhatsApp / SMS Ticket) *</label>
               <div style="display:flex; gap:8px;">
@@ -380,7 +393,7 @@
                   ⏳ QR expires in: <span id="qrTimerCount">09:59</span>
                 </div>
                 <div style="font-size:10.5px; color:var(--text-muted); margin-top:4px;">
-                  Real-time NPCI settlement to AirfareX VPA
+                  Secure Payment Gateway Settlement
                 </div>
               </div>
 
@@ -575,7 +588,7 @@
             <span>·</span>
             <span>🏛️ DGCA Compliant</span>
             <span>·</span>
-            <span>⚡ Instant UPI Refund</span>
+            <span>⚡ UPI & Card Refunds</span>
           </div>
 
           <div style="margin-top:16px; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid var(--border-color); font-size:11px; color:var(--text-muted); line-height:1.4;">
@@ -586,66 +599,47 @@
 
     </div>
 
-    <!-- 5. Confirmed E-Ticket & Boarding Pass View (ONLY SHOWN UPON COMPLETED & VERIFIED PAYMENT) -->
+    <!-- 5. Confirmed Booking View (ONLY SHOWN UPON COMPLETED & VERIFIED PAYMENT) -->
     <div class="ticket-success-container" id="ticketSuccessView" style="display:none;">
       <div class="ticket-success-header">
         <div class="success-check-badge">✓</div>
         <h2 style="font-size:26px; font-weight:800; margin:0 0 6px; color:var(--brand-mint);">
-          🎉 You're all set! Your trip is confirmed.
+          Booking Confirmed
         </h2>
         <p style="font-size:14px; color:var(--text-muted); margin:0;">
-          Payment settled via <b id="confPaymentMethod" style="color:var(--brand-cyan);">UPI</b>. Your flight ticket and seat have been officially reserved with the airline. Details sent to <b id="confSentEmail" style="color:var(--brand-cyan);">rajesh.sharma@example.com</b> and SMS to <b id="confSentPhone" style="color:var(--text-main);">+91 9876543210</b>.
+          Payment verified via <b id="confPaymentMethod" style="color:var(--brand-cyan);">Sandbox Payment Gateway</b>. Your booking reservation has been successfully created. Confirmation sent to <b id="confSentEmail" style="color:var(--brand-cyan);">rajesh.sharma@example.com</b> and SMS to <b id="confSentPhone" style="color:var(--text-main);">+91 9876543210</b>.
         </p>
       </div>
 
-      <!-- Prominently Highlighted Booked Seat Banner -->
-      <div class="confirmed-seat-banner">
-        <div style="display:flex; align-items:center; gap:14px;">
-          <span style="font-size:28px;">💺</span>
-          <div>
-            <div style="font-size:11px; text-transform:uppercase; color:var(--brand-mint); font-weight:800; letter-spacing:0.5px;">
-              OFFICIALLY ALLOCATED SEAT
-            </div>
-            <div style="font-size:22px; font-weight:800; color:#ffffff;" id="confSeatBanner">
-              Seat 14A (Window · Forward Cabin)
-            </div>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <span class="badge green" style="font-size:12px; padding:6px 14px;">
-            ✓ PAYMENT COMPLETE · SEAT CONFIRMED
-          </span>
-        </div>
-      </div>
-
-      <!-- Realistic DGCA Boarding Pass -->
+      <!-- Confirmed Booking Card -->
       <div class="boarding-pass-card">
         <div class="boarding-pass-top">
           <div style="display:flex; align-items:center; gap:12px;">
             <span style="font-size:24px;">✈</span>
             <div>
               <div style="font-size:18px; font-weight:800; letter-spacing:0.5px;" id="confAirlineHeader">IndiGo</div>
-              <div style="font-size:11px; opacity:0.8;">DGCA Verified Electronic Passenger Ticket</div>
+              <div style="font-size:11px; opacity:0.8;">AirfareX Verified Booking Reservation</div>
             </div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:12px; opacity:0.8;">E-TICKET NUMBER</div>
-            <div style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700;" id="confEticketNo">098-8492019482</div>
+            <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Status</div>
+            <span class="badge green" style="font-size:12px;">✓ PAYMENT VERIFIED</span>
           </div>
         </div>
 
         <div class="boarding-pass-body">
           <div class="boarding-pnr-banner">
             <div>
-              <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Airline PNR Reference</div>
-              <div class="pnr-display" id="confPnr">6E-8491</div>
+              <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Booking Reference</div>
+              <div class="pnr-display" id="confBookingRef" style="color:var(--brand-cyan);">AXI7K29P</div>
             </div>
-            <div style="text-align:center;">
-              <span class="badge green" style="font-size:12px; padding:6px 14px;">CONFIRMED · SEAT ALLOCATED</span>
+            <div>
+              <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Reserved Sector</div>
+              <div style="font-size:16px; font-weight:800; color:var(--text-main); margin-top:2px;" id="confSectorDisplay">HYD ➔ DEL</div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">UPI UTR Reference</div>
-              <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--brand-mint);" id="confUtr">UPI/428194018291</div>
+              <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Amount Paid</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:800; color:var(--brand-mint);" id="confAmountDisplay">₹4,240</div>
             </div>
           </div>
 
@@ -659,12 +653,12 @@
               <div id="confFlightDetails">6E-205 (A320neo)</div>
             </div>
             <div class="boarding-info-cell">
-              <label>Seat Number</label>
+              <label>Seat Allocation</label>
               <div id="confSeatNo" style="color:var(--brand-cyan); font-size:16px; font-weight:800;">14A (Window)</div>
             </div>
             <div class="boarding-info-cell">
-              <label>Boarding Gate / Terminal</label>
-              <div id="confGateTerminal">Gate G12 · T2</div>
+              <label>Payment Gateway</label>
+              <div id="confGateTerminal" style="font-weight:700; color:var(--brand-mint);">Sandbox / Verified</div>
             </div>
           </div>
 
@@ -687,47 +681,44 @@
             </div>
           </div>
 
-          <!-- Barcode representation -->
-          <div class="barcode-strip">
-            <div class="barcode-simulated"></div>
-            <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#333; margin-top:6px; letter-spacing:3px;" id="confBarcodeText">
-              M1SHARMA/RAJESH 6E205 12SEP HYDDEL ETKT0988492019482
-            </div>
-          </div>
-
-          <!-- Statutory GST Tax Invoice Details (SAC 9964) -->
+          <!-- Statutory GST Breakdown Details (SAC 9964) -->
           <div class="tax-invoice-box">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-weight:700; color:var(--text-main);">
-              <span>🧾 Statutory GST Tax Invoice (Passenger Transport by Air - SAC 9964)</span>
+              <span>🧾 Authoritative Price Breakdown (SAC 9964)</span>
               <span id="confInvoiceNo">INV-2026-AIRX-9821</span>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:11.5px;">
               <div>
                 Airline GSTIN: <b style="color:var(--text-main);" id="confAirlineGstin">07AAACI1111A1Z1</b><br>
-                Recipient: <span id="confRecipient">Rajesh Sharma</span><br>
+                Passenger: <span id="confRecipient">Rajesh Sharma</span><br>
                 Booking ID: <b style="color:var(--brand-cyan); font-family:monospace;" id="confBookingId">--</b><br>
                 Payment ID: <b style="color:var(--brand-mint); font-family:monospace;" id="confPaymentId">--</b>
               </div>
               <div style="text-align:right;">
-                Taxable Value: <b id="confTaxableVal">₹--</b><br>
+                Taxable Base: <b id="confTaxableVal">₹--</b><br>
                 GST (CGST 2.5% + SGST 2.5%): <b id="confGstVal">₹--</b><br>
                 Total Paid: <b style="color:var(--brand-cyan); font-size:15px;" id="confTotalPaid">₹--</b>
               </div>
             </div>
+          </div>
+
+          <!-- Honest Development Environment Disclaimer -->
+          <div id="confDevNotice" style="margin-top:14px; padding:12px 16px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; font-size:12.5px; color:#fbbf24; text-align:center; font-weight:600;">
+            ℹ️ Development booking — airline ticket issuance is not connected in this environment.
           </div>
         </div>
       </div>
 
       <!-- Action Buttons -->
       <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-top:20px;">
-        <button class="btn primary" onclick="window.print()" style="display:flex; align-items:center; gap:8px;">
-          <span>🖨️</span> <span>Print E-Ticket & Boarding Pass</span>
-        </button>
-        <button class="btn light" onclick="downloadInvoiceSummary()" style="display:flex; align-items:center; gap:8px;">
-          <span>📄</span> <span>Download GST Invoice (PDF/JSON)</span>
+        <button class="btn primary" onclick="window.location.href='/?tab=trips'" style="display:flex; align-items:center; gap:8px;">
+          <span>🧳</span> <span>View My Trips</span>
         </button>
         <button class="btn light" onclick="window.location.href='/'" style="display:flex; align-items:center; gap:8px;">
-          <span>🔍</span> <span>Book Another Flight / Search</span>
+          <span>✈️</span> <span>Back to Flights</span>
+        </button>
+        <button class="btn light" onclick="window.print()" style="display:flex; align-items:center; gap:8px;">
+          <span>🖨️</span> <span>Print Booking Summary</span>
         </button>
       </div>
     </div>
@@ -837,7 +828,7 @@
             </div>
             <input type="password" id="pgUpiPinInput" class="pg-pin-input" maxlength="6" value="1234" placeholder="••••">
             <div style="font-size:10.5px; color:var(--brand-mint);">
-              🔒 Protected by NPCI UPI Multi-Factor Authentication
+              🔒 Protected by Bank-Grade Multi-Factor Authentication
             </div>
           </div>
         </div>
@@ -860,7 +851,7 @@
         <!-- Live Processing Indicator -->
         <div id="pgProcessingState" style="display:none; text-align:center; padding:16px 0;">
           <div class="loader-spinner" style="margin:0 auto 12px; width:36px; height:36px; border:3px solid rgba(14,165,233,0.2); border-top-color:var(--brand-cyan); border-radius:50%; animation:spin 0.8s linear infinite;"></div>
-          <div style="font-weight:700; font-size:13px; color:var(--text-main);" id="pgProcessText">Contacting NPCI Payment Switch...</div>
+          <div style="font-weight:700; font-size:13px; color:var(--text-main);" id="pgProcessText">Contacting Payment Gateway Switch...</div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Please do not refresh or press back.</div>
         </div>
 
@@ -886,6 +877,7 @@
 
   <!-- Scripts -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="/js/auth.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/booking.js"></script>
 </body>

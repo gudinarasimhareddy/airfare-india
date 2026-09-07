@@ -1,96 +1,106 @@
-from fastapi import APIRouter, Query, HTTPException
-from typing import Optional, List
-from backend.database import get_db_connection
-from backend.models import SearchResponse, FlightItem, FlightStatusResponse
+"""
+AirfareX India — Flight Search, Status & Master Catalog Router
+Integrates FlightSearchService (multi-provider + 15-min TTL cache) and AirportService.
+"""
 
-router = APIRouter(prefix="/flights", tags=["Flights"])
+from fastapi import APIRouter, Query, HTTPException, status
+from typing import Optional, List, Dict, Any
+
+from backend.database import get_db_connection
+from backend.models import (
+    SearchResponse,
+    FlightItem,
+    FlightStatusResponse,
+    ProviderStatusResponse,
+    AirportAutocompleteItem
+)
+from backend.services.flight_providers.base import FlightSearchParams
+from backend.services.flight_search_service import flight_search_service
+from backend.services.airport_service import airport_service
+
+router = APIRouter(prefix="/flights", tags=["Flights & Providers"])
 
 @router.get("/search", response_model=SearchResponse)
-def search_flights(
+async def search_flights(
     from_city: str = Query("HYD", description="Origin city name or 3-letter IATA code"),
     to_city: str = Query("DEL", description="Destination city name or 3-letter IATA code"),
     date: Optional[str] = Query(None, description="Departure date (YYYY-MM-DD)"),
-    cabin: Optional[str] = Query("Economy", description="Cabin class"),
+    return_date: Optional[str] = Query(None, description="Return date (YYYY-MM-DD)"),
+    cabin: Optional[str] = Query("Economy", description="Cabin class: Economy, Business"),
     stops: Optional[str] = Query("Any", description="Stops filter: Any, Nonstop, 1 stop"),
     airline: Optional[str] = Query("All airlines", description="Airline filter"),
-    max_price: Optional[int] = Query(None, description="Max total fare threshold"),
+    max_price: Optional[int] = Query(None, description="Max total fare threshold in INR"),
     baggage: Optional[str] = Query("Any", description="Baggage filter: Any, Include checked bag, Carry-on only"),
     time_of_day: Optional[str] = Query("Any time", description="Morning (05-12), Afternoon (12-17), Evening (17+)"),
     direct_only: Optional[bool] = Query(False, description="Filter only non-stop flights"),
-    sort_by: Optional[str] = Query("score", description="Sort by: score, price, duration, emissions")
+    sort_by: Optional[str] = Query("score", description="Sort by: score, price, duration, emissions"),
+    adults: Optional[int] = Query(1, ge=1, le=9, description="Number of adult passengers"),
+    bypass_cache: Optional[bool] = Query(False, description="Force fresh search bypassing cache")
 ):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Normalize origin and destination terms
-    clean_from = from_city.replace("(", "").replace(")", "").strip().upper()
-    clean_to = to_city.replace("(", "").replace(")", "").strip().upper()
-
-    # Query matching flights
-    cursor.execute("""
-        SELECT * FROM flights 
-        WHERE (UPPER(origin) LIKE ? OR UPPER(origin_code) LIKE ?)
-          AND (UPPER(destination) LIKE ? OR UPPER(destination_code) LIKE ?)
-    """, (f"%{clean_from}%", f"%{clean_from}%", f"%{clean_to}%", f"%{clean_to}%"))
-
-    rows = cursor.fetchall()
-    
-    # If no exact pair found, fallback to returning top flights with simulated route adjustment
-    if not rows:
-        cursor.execute("SELECT * FROM flights LIMIT 8")
-        rows = cursor.fetchall()
-
-    flights: List[FlightItem] = []
-    for r in rows:
-        item = dict(r)
-
-        # Filters
-        if direct_only and item["stops"] != "Nonstop":
-            continue
-        if stops != "Any" and item["stops"].lower() != stops.lower():
-            continue
-        if airline != "All airlines" and item["airline"].lower() != airline.lower():
-            continue
-        if max_price is not None and item["total_fare"] > max_price:
-            continue
-        if baggage == "Include checked bag" and item["bag_fee"] > 0:
-            continue
-
-        # Time of day filter
-        dep_hour = int(item["dep_time"].split(":")[0])
-        if time_of_day == "Morning" and not (5 <= dep_hour < 12):
-            continue
-        elif time_of_day == "Afternoon" and not (12 <= dep_hour < 17):
-            continue
-        elif time_of_day == "Evening" and not (dep_hour >= 17 or dep_hour < 5):
-            continue
-
-        flights.append(FlightItem(**item))
-
-    # Sorting
-    if sort_by == "price":
-        flights.sort(key=lambda x: x.total_fare)
-    elif sort_by == "duration":
-        flights.sort(key=lambda x: x.duration_mins)
-    elif sort_by == "emissions":
-        flights.sort(key=lambda x: x.emissions_kg)
-    else: # default "score"
-        flights.sort(key=lambda x: x.fare_score, reverse=True)
-
-    conn.close()
-
-    best_fare = min([f.total_fare for f in flights]) if flights else None
-
-    return SearchResponse(
-        total=len(flights),
+    """
+    Executes flight search via provider-agnostic FlightSearchService.
+    Results are cached for 15 minutes in SQLite with explicit data source labeling (LIVE / CACHE / DEVELOPMENT).
+    """
+    params = FlightSearchParams(
         origin=from_city,
         destination=to_city,
-        best_fare=best_fare,
-        flights=flights
+        date=date,
+        return_date=return_date,
+        cabin=cabin or "Economy",
+        stops=stops or "Any",
+        airline=airline or "All airlines",
+        max_price=max_price,
+        baggage=baggage or "Any",
+        time_of_day=time_of_day or "Any time",
+        direct_only=direct_only or False,
+        sort_by=sort_by or "score",
+        adults=adults or 1
     )
+
+    return await flight_search_service.search_flights(params, bypass_cache=bypass_cache)
+
+@router.get("/provider-status", response_model=ProviderStatusResponse)
+def get_provider_status():
+    """Returns active provider metadata and cache status. Secrets are never exposed."""
+    return flight_search_service.get_provider_status()
+
+@router.get("/airports/autocomplete", response_model=List[AirportAutocompleteItem])
+async def autocomplete_airports(
+    q: Optional[str] = Query("", description="Search term for airport IATA code, city, or name"),
+    limit: Optional[int] = Query(10, ge=1, le=50, description="Max suggestions to return")
+):
+    """Provides fast autocomplete matching for Indian domestic airports."""
+    res = await airport_service.autocomplete(query=q or "", limit=limit or 10)
+    return [AirportAutocompleteItem(**item) for item in res]
+
+@router.get("/airports")
+async def list_airports(
+    q: Optional[str] = Query(None, description="Optional search filter"),
+    limit: Optional[int] = Query(None, description="Optional limit")
+):
+    """Returns list of major monitored Indian domestic airports from master catalog."""
+    if q:
+        return await airport_service.autocomplete(query=q, limit=limit or 10)
+    return await airport_service.list_all(limit=limit)
+
+@router.get("/airlines")
+async def list_airlines():
+    """Returns list of major Indian domestic air carriers from master catalog."""
+    from backend.supabase_client import get_airlines_from_supabase
+    supa_airlines = await get_airlines_from_supabase()
+    if supa_airlines:
+        return supa_airlines
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT iata_code, icao_code, name, callsign, country FROM airlines ORDER BY name ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 @router.get("/status/{flight_no}", response_model=FlightStatusResponse)
 def get_flight_status(flight_no: str):
+    """Returns flight status with simulated carrier radar lookups."""
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -118,7 +128,7 @@ def get_flight_status(flight_no: str):
             aircraft="Airbus A320neo"
         )
     else:
-        # Provide real-time simulated flight status for any arbitrary flight number
+        # Fallback realistic flight status
         prefix = clean_no[:2]
         airline_map = {
             "6E": "IndiGo",
@@ -126,7 +136,8 @@ def get_flight_status(flight_no: str):
             "QP": "Akasa Air",
             "SG": "SpiceJet",
             "IX": "Air India Express",
-            "UK": "Vistara"
+            "S5": "Star Air",
+            "UK": "Air India (formerly Vistara)"
         }
         airline = airline_map.get(prefix, "IndiGo")
         return FlightStatusResponse(
@@ -141,3 +152,32 @@ def get_flight_status(flight_no: str):
             gate="G14",
             aircraft="Airbus A321neo"
         )
+
+@router.delete("/cache")
+def clear_flight_cache():
+    """Utility endpoint to flush flight search cache."""
+    cleared = flight_search_service.clear_cache()
+    return {"status": "success", "cleared_records": cleared, "message": "Flight search cache purged"}
+
+@router.post("/demo-reset")
+def reset_demo_state():
+    """
+    Safe development-only reset endpoint for hackathon demonstrations.
+    Flushes flight search cache and ensures baseline catalogs.
+    Strictly blocked in production with HTTP 403 Forbidden.
+    """
+    import os
+    env_mode = os.environ.get("ENVIRONMENT", "development").strip().lower()
+    if env_mode == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo reset is disabled in production environment."
+        )
+
+    cleared = flight_search_service.clear_cache()
+    return {
+        "status": "success",
+        "environment": env_mode,
+        "cleared_cache_entries": cleared,
+        "message": "Development demo state reset successfully. Safe for next demonstration."
+    }

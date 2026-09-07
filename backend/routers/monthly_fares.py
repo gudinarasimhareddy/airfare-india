@@ -23,7 +23,15 @@ BASE_FARES = {
     ("PNQ", "DEL"): 3850,
     ("DEL", "PNQ"): 3900,
     ("DEL", "JAI"): 2450,
-    ("JAI", "DEL"): 2480
+    ("JAI", "DEL"): 2480,
+    ("BOM", "HYD"): 2850,
+    ("HYD", "BOM"): 2890,
+    ("BLR", "HYD"): 3150,
+    ("HYD", "BLR"): 3100,
+    ("BLR", "MAA"): 2350,
+    ("MAA", "BLR"): 2350,
+    ("BOM", "GOI"): 2980,
+    ("GOI", "BOM"): 2950
 }
 
 AIRLINES_POOL = ["IndiGo", "Akasa Air", "Air India Express", "Air India", "SpiceJet"]

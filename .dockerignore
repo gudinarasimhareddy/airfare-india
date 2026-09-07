@@ -1,0 +1,14 @@
+.env
+.env.local
+.env.*.local
+*.pyc
+__pycache__/
+.pytest_cache/
+.git/
+.gitignore
+tests/
+airfarex.db
+*.zip
+*.bat
+Antigravity*
+scratch/
