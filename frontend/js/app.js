@@ -4433,6 +4433,150 @@ function renderAiAdvisorAdminMetrics() {
   }
 }
 
+function openModal(modalId) {
+  const m = document.getElementById(modalId);
+  if (m) {
+    m.classList.remove('hidden');
+    m.classList.add('open');
+  }
+}
+
+function closeModal(modalId) {
+  const m = document.getElementById(modalId);
+  if (m) {
+    m.classList.add('hidden');
+    m.classList.remove('open');
+  }
+}
+
+// =========================================================
+// LIVE VOICE ASSISTANT UI CONTROLLERS (Steps 12-18)
+// =========================================================
+
+function openVoiceAgentModal() {
+  openModal('voiceAgentModal');
+  const alertEl = document.getElementById('voiceFallbackAlert');
+  if (alertEl && window.AirfareXAgent && !window.AirfareXAgent.isVoiceSupported()) {
+    alertEl.classList.remove('hidden');
+  } else if (alertEl) {
+    alertEl.classList.add('hidden');
+  }
+}
+
+function closeVoiceAgentModal() {
+  if (window.AirfareXAgent) {
+    window.AirfareXAgent.stopVoiceListening();
+    window.AirfareXAgent.stopSpeaking();
+  }
+  closeModal('voiceAgentModal');
+}
+
+function toggleVoiceListening() {
+  if (!window.AirfareXAgent) return;
+  const state = window.AirfareXAgent.getState();
+  if (state.isListening) {
+    window.AirfareXAgent.stopVoiceListening();
+    showToast('🎙️ Voice listening stopped.');
+  } else {
+    const started = window.AirfareXAgent.startVoiceListening();
+    if (!started) {
+      showToast('⚠️ Microphone access unavailable. Please try text input or voice quick actions.');
+      const alertEl = document.getElementById('voiceFallbackAlert');
+      if (alertEl) alertEl.classList.remove('hidden');
+    } else {
+      showToast('🔴 Listening... Speak naturally to your AI advisor.');
+    }
+  }
+}
+
+function toggleVoiceMute() {
+  if (!window.AirfareXAgent) return;
+  const currentlyMuted = window.AirfareXAgent.isVoiceMuted();
+  window.AirfareXAgent.setVoiceMuted(!currentlyMuted);
+  const btn = document.getElementById('voiceAudioToggleBtn');
+  if (btn) {
+    btn.textContent = !currentlyMuted ? '🔇 Audio Muted' : '🔊 Audio On';
+  }
+  showToast(!currentlyMuted ? '🔇 Voice responses muted.' : '🔊 Voice responses enabled.');
+}
+
+function handleVoiceQuickCommand(cmd) {
+  if (!cmd) return;
+  const userTextEl = document.getElementById('voiceUserTranscriptText');
+  if (userTextEl) userTextEl.textContent = `"${cmd}"`;
+  
+  if (window.AirfareXAgent) {
+    window.AirfareXAgent.processUserRequest(cmd).then(res => {
+      const respTextEl = document.getElementById('voiceAgentResponseText');
+      if (respTextEl) {
+        const cleanAnswer = (res.answer || res.reply || '')
+          .replace(/###/g, '')
+          .replace(/##/g, '')
+          .replace(/\*\*/g, '')
+          .replace(/`/g, '')
+          .replace(/>/g, '')
+          .replace(/•/g, '')
+          .replace(/<[^>]*>/g, '')
+          .slice(0, 220);
+        respTextEl.textContent = `"${cleanAnswer}..."`;
+      }
+      if (typeof window.onAiVoiceResponse === 'function') {
+        window.onAiVoiceResponse(res, cmd, res.answer || res.reply);
+      }
+    });
+  }
+}
+
+// Subscribe to Voice State and Transcript events
+if (window.AirfareXAgent) {
+  window.AirfareXAgent.onVoiceStateChange((stateName) => {
+    const badge = document.getElementById('voiceStateBadge');
+    const orb = document.getElementById('voiceOrb');
+    const btn = document.getElementById('voiceMainControlBtn');
+    const btnIcon = document.getElementById('voiceBtnIcon');
+    const btnLabel = document.getElementById('voiceBtnLabel');
+    const chatMicBtn = document.getElementById('aiChatMicBtn');
+
+    if (badge) badge.textContent = stateName;
+
+    if (orb) {
+      orb.classList.remove('listening', 'thinking', 'speaking');
+      if (stateName.includes('Listening')) orb.classList.add('listening');
+      else if (stateName.includes('Understanding') || stateName.includes('Searching') || stateName.includes('Analyzing')) orb.classList.add('thinking');
+      else if (stateName.includes('Responding')) orb.classList.add('speaking');
+    }
+
+    if (btn) {
+      if (stateName.includes('Listening')) {
+        btn.classList.add('listening');
+        if (btnIcon) btnIcon.textContent = '🔴';
+        if (btnLabel) btnLabel.textContent = 'Stop Listening';
+      } else {
+        btn.classList.remove('listening');
+        if (btnIcon) btnIcon.textContent = '🎙️';
+        if (btnLabel) btnLabel.textContent = 'Start Voice';
+      }
+    }
+
+    if (chatMicBtn) {
+      chatMicBtn.style.background = stateName.includes('Listening') ? 'rgba(244,63,94,0.3)' : 'rgba(14,165,233,0.15)';
+      chatMicBtn.textContent = stateName.includes('Listening') ? '🔴' : '🎙️';
+    }
+  });
+
+  window.AirfareXAgent.onVoiceTranscript((text, isFinal) => {
+    const userTextEl = document.getElementById('voiceUserTranscriptText');
+    if (userTextEl) userTextEl.textContent = `"${text}"${isFinal ? '' : '...'}`;
+  });
+
+  window.onAiVoiceResponse = (res, userPrompt, spokenText) => {
+    const respTextEl = document.getElementById('voiceAgentResponseText');
+    if (respTextEl && spokenText) {
+      respTextEl.textContent = `"${spokenText.slice(0, 240)}${spokenText.length > 240 ? '...' : ''}"`;
+    }
+  };
+}
+
 // Global window bindings for Phase 8 & 8.5 UX
 window.showTab = showTab;
 window.triggerSearch = triggerSearch;
@@ -4454,6 +4598,14 @@ window.resetActiveProfilePreferences = resetActiveProfilePreferences;
 window.openPersonalizationModal = openPersonalizationModal;
 window.handleSavePreferences = handleSavePreferences;
 window.renderAiAdvisorAdminMetrics = renderAiAdvisorAdminMetrics;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.openVoiceAgentModal = openVoiceAgentModal;
+window.closeVoiceAgentModal = closeVoiceAgentModal;
+window.toggleVoiceListening = toggleVoiceListening;
+window.toggleVoiceMute = toggleVoiceMute;
+window.handleVoiceQuickCommand = handleVoiceQuickCommand;
+
 
 
 

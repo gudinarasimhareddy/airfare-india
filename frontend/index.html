@@ -143,6 +143,11 @@
         <option value="cyber">⚡ Cyber Neon</option>
       </select>
 
+      <!-- Live Voice AI Travel Assistant Button (Steps 12-18) -->
+      <button type="button" class="btn sm light voice-nav-btn" onclick="openVoiceAgentModal()" title="Start Live Voice Assistant" style="display:inline-flex; align-items:center; gap:6px; background:rgba(14,165,233,0.12); border-color:var(--brand-cyan); color:var(--brand-cyan); font-weight:700;">
+        <span>🎙️</span> <span>Live Voice</span>
+      </button>
+
       <!-- Dynamic Customer Profile / Authentication Widget -->
       <div id="userNavWidget" style="display:inline-flex; align-items:center;">
         <button class="btn sm primary" onclick="openAuthModal('login')" title="Customer Account Login / Sign Up" style="display:inline-flex; align-items:center; gap:6px;">
@@ -327,6 +332,7 @@
                 </div>
                 <div style="display:flex; gap:6px; align-items:center;">
                   <span class="badge green" id="heroAdvisorProfileBadge" style="font-size:10.5px; font-weight:700;">Rajesh Sharma (Budget)</span>
+                  <button type="button" class="btn sm light" onclick="openVoiceAgentModal()" style="font-size:11px; padding:3px 8px; color:var(--brand-cyan); border-color:var(--brand-cyan);">🎙️ Live Voice</button>
                   <button type="button" class="btn sm light" onclick="toggleAiAssistant()" style="font-size:11px; padding:3px 8px;">Open Advisor 💬</button>
                 </div>
               </div>
@@ -2855,6 +2861,7 @@
         </div>
       </div>
       <div class="ai-header-actions">
+        <button class="ai-action-btn" onclick="openVoiceAgentModal()" title="Start Live Voice Agent">🎙️</button>
         <button class="ai-action-btn" onclick="openModal('userPreferencesModal')" title="Personalize Preferences">⚙️</button>
         <button class="ai-action-btn" onclick="clearAiChat()" title="Clear Chat" data-i18n-title="ai_clear_chat">🗑️</button>
         <button class="ai-action-btn" onclick="toggleAiAssistant()" title="Close Assistant">✕</button>
@@ -2891,10 +2898,89 @@
       <button class="ai-suggest-btn" onclick="sendAiQuickPrompt(this)">🔍 Why is this flight my top match?</button>
     </div>
 
-    <!-- Chat Input Area -->
+    <!-- Chat Input Area with Voice Mic Toggle -->
     <div class="ai-chat-input-row">
       <input type="text" id="aiInputField" class="ai-input-field" placeholder="Ask Advisor: 'Find the best morning flight for me'" data-i18n-placeholder="ai_input_placeholder" onkeydown="handleAiInputKey(event)">
+      <button type="button" class="ai-mic-btn" id="aiChatMicBtn" onclick="toggleVoiceListening()" title="Start Voice Input" style="background:rgba(14,165,233,0.15); border:1px solid var(--brand-cyan); color:var(--brand-cyan); border-radius:var(--radius-sm); padding:6px 10px; cursor:pointer; font-size:14px;">🎙️</button>
       <button class="ai-send-btn" onclick="handleSendAiMessage()" title="Send Message" data-i18n-title="ai_btn_send">➤</button>
+    </div>
+  </div>
+
+  <!-- Live Voice AI Travel Assistant Modal (Steps 12-18) -->
+  <div class="modal-backdrop hidden" id="voiceAgentModal">
+    <div class="modal-card voice-agent-modal-card">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:20px;">🎙️</span>
+          <div>
+            <h3 style="margin:0; font-size:16px; font-weight:800; color:var(--text-main);">AirfareX Live Voice Agent</h3>
+            <span style="font-size:11px; color:var(--brand-cyan);">Conversational Speech-to-Speech Travel Agent</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="btn sm light" id="voiceAudioToggleBtn" onclick="toggleVoiceMute()" title="Toggle Voice Response Audio">🔊 Audio On</button>
+          <button type="button" class="modal-close-btn" onclick="closeVoiceAgentModal()">✕</button>
+        </div>
+      </div>
+
+      <div class="voice-agent-body">
+        <!-- Voice Orb / Animated Waveform -->
+        <div class="voice-orb-wrapper">
+          <div class="voice-orb" id="voiceOrb">
+            <span class="voice-orb-icon">🎙️</span>
+            <div class="voice-orb-ring ring-1"></div>
+            <div class="voice-orb-ring ring-2"></div>
+            <div class="voice-orb-ring ring-3"></div>
+          </div>
+        </div>
+
+        <!-- Voice Lifecycle State Badge (7 States) -->
+        <div class="voice-state-container">
+          <div class="voice-state-badge" id="voiceStateBadge">🎙️ Ready</div>
+          <div class="voice-state-sub" id="voiceStateSub">"Hi! Tell me what you're looking for and I'll help you choose."</div>
+        </div>
+
+        <!-- Voice Fallback Alert (Step 18) -->
+        <div class="voice-fallback-alert hidden" id="voiceFallbackAlert">
+          <span>⚠️ Voice input isn't supported in this browser. You can continue using text chat or quick voice commands below.</span>
+        </div>
+
+        <!-- Live Conversation Stream -->
+        <div class="voice-transcript-box" id="voiceTranscriptBox">
+          <div class="voice-stream-item user" id="voiceUserTranscript">
+            <span class="voice-stream-label">🗣️ You:</span>
+            <span class="voice-stream-text" id="voiceUserTranscriptText">Tap "Start Voice" and speak naturally...</span>
+          </div>
+          <div class="voice-stream-item agent" id="voiceAgentResponse">
+            <span class="voice-stream-label">🤖 Agent:</span>
+            <span class="voice-stream-text" id="voiceAgentResponseText">"Namaste! Where would you like to fly?"</span>
+          </div>
+        </div>
+
+        <!-- Interactive Mic Action Button -->
+        <div class="voice-controls-row">
+          <button type="button" class="btn primary voice-main-btn" id="voiceMainControlBtn" onclick="toggleVoiceListening()">
+            <span id="voiceBtnIcon">🎙️</span>
+            <span id="voiceBtnLabel">Start Voice</span>
+          </button>
+        </div>
+
+        <!-- Voice Quick Actions Bar (Step 23) -->
+        <div class="voice-quick-actions-bar">
+          <span style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">Quick Voice Commands:</span>
+          <div class="voice-chips-grid">
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('Find flights from Hyderabad to Delhi')">✈️ Flights to Delhi</button>
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('What is best for me?')">🎯 Best For Me</button>
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('Why did you choose this flight?')">💡 Why This Flight?</button>
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('This time comfort is more important')">🛋️ Prioritize Comfort</button>
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('Show me the cheapest flight')">💰 Find Cheapest</button>
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('Find the fastest flight')">⚡ Fastest Flight</button>
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('Compare the top 2 flights')">⚖️ Compare Top 2</button>
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('Book it')">🎟️ Book It</button>
+            <button type="button" class="voice-cmd-chip" onclick="handleVoiceQuickCommand('Start over')">🔄 Start Over</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
